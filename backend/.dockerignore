@@ -1,0 +1,41 @@
+# Dependencies
+node_modules
+
+# Version control
+.git
+.gitignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Documentation
+*.md
+
+# Tests
+tests/
+coverage/
+
+# IDE / Editor
+.vscode/
+.idea/
+.cursor/
+.DS_Store
+
+# Dev tooling
+.husky/
+biome.json
+tsconfig.json
+commitlint.config.cjs
+
+# Docker
+docker-compose.yml
+Dockerfile
+
+# DB migrations (applied by the `migrate` service in the root docker-compose.yml)
+db/
+
+# Misc
+*.log
+.cache

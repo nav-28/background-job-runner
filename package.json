@@ -1,0 +1,23 @@
+{
+  "name": "web-app-template",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fastify backend + Next.js frontend monorepo template for shipping MVPs fast.",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @app/frontend --filter @app/backend dev",
+    "dev:backend": "pnpm --filter @app/backend start",
+    "dev:frontend": "pnpm --filter @app/frontend dev",
+    "build": "pnpm --filter @app/frontend build",
+    "check": "pnpm -r check",
+    "test": "pnpm -r test",
+    "generate:api": "pnpm --filter @app/frontend generate:api",
+    "generate:api:live": "pnpm --filter @app/frontend generate:api:live",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  }
+}

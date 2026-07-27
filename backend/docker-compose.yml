@@ -1,0 +1,24 @@
+# Local development database only.
+#   docker compose up -d postgres   (from ./backend)
+#   pnpm db:migrate
+#
+# Run the app itself with `pnpm dev`. For the full containerised stack
+# (Postgres + migrations + backend + frontend) use `pnpm docker:up` from the
+# repo root instead — that one applies migrations automatically.
+#
+# Note: no volume, so the data is intentionally throwaway. `pnpm test:integration`
+# truncates tables, so point it here rather than at a stack you care about.
+services:
+  postgres:
+    image: postgres:18
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: "admin"
+      POSTGRES_PASSWORD: "test"
+      POSTGRES_DB: "test"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5

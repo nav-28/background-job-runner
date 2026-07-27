@@ -1,0 +1,4 @@
+pnpm-lock.yaml -diff linguist-generated
+backend/pnpm-lock.yaml -diff linguist-generated
+frontend/openapi.json -diff linguist-generated
+frontend/src/lib/api/** -diff linguist-generated
