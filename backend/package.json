@@ -24,6 +24,7 @@
     "db": "dbmate h",
     "db:create-migration": "dbmate new",
     "db:migrate": "dbmate -e DBMATE_DATABASE_URL --no-dump-schema up",
+    "db:rollback": "dbmate -e DBMATE_DATABASE_URL --no-dump-schema down",
     "db:create-seed": "dbmate -e DBMATE_DATABASE_URL -d ./db/seeds/ new",
     "db:seed": "dbmate -e DBMATE_DATABASE_URL -d ./db/seeds/ up",
     "postinstall": "husky"

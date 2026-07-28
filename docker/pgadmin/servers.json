@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "web-app-template (local)",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "test",
+      "Username": "admin",
+      "SSLMode": "prefer"
+    }
+  }
+}

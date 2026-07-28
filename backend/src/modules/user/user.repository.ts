@@ -16,17 +16,7 @@ export async function insert(user: User): Promise<void> {
   const db = getDb();
   try {
     await db`
-      INSERT INTO users ${db(
-        user,
-        'id',
-        'createdAt',
-        'updatedAt',
-        'email',
-        'country',
-        'postalCode',
-        'street',
-        'role',
-      )}
+      INSERT INTO users ${db(user, 'id', 'createdAt', 'updatedAt', 'email', 'name')}
     `;
   } catch (error: unknown) {
     if (error instanceof Error && 'code' in error && error.code === UNIQUE_VIOLATION) {
@@ -44,11 +34,7 @@ export async function findAllPaginated(
   filters: UserFilters = {},
 ): Promise<Paginated<User>> {
   const db = getDb();
-  const where = joinConditions([
-    filters.country && db`country = ${filters.country}`,
-    filters.street && db`street = ${filters.street}`,
-    filters.postalCode && db`"postalCode" = ${filters.postalCode}`,
-  ]);
+  const where = joinConditions([filters.email && db`email = ${filters.email}`]);
 
   // ORDER BY is required for stable pagination — without it Postgres may return
   // rows in a different order per page and items can repeat or be skipped.

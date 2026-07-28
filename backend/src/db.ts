@@ -27,7 +27,7 @@ export async function closeDb() {
 
 /**
  * Builds a `WHERE a AND b AND c` fragment from a list of optional conditions.
- * Falsy entries are skipped, so callers can write `filters.country && db`country = ${...}``.
+ * Falsy entries are skipped, so callers can write `filters.email && db`email = ${...}``.
  * Returns an empty fragment when nothing is filtered.
  */
 export const joinConditions = (

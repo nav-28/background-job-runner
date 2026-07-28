@@ -8,15 +8,26 @@ export async function buildTestApp() {
   return app;
 }
 
-export async function truncateUsers() {
-  await getDb()`TRUNCATE TABLE users`;
+/**
+ * Tables are listed together rather than with CASCADE: users is referenced by
+ * api_keys and tasks, so Postgres refuses to truncate it alone.
+ */
+export async function truncateAll() {
+  await getDb()`TRUNCATE TABLE task_events, tasks, api_keys, users`;
 }
 
 export const validUser = {
   email: 'john.doe@gmail.com',
-  country: 'England',
-  street: 'Road Avenue',
-  postalCode: '29145',
+  name: 'John Doe',
 };
+
+export const DEV_USER_ID = '00000000-0000-4000-8000-000000000001';
+
+export async function ensureDevUser() {
+  await getDb()`
+    INSERT INTO users (id, email, name)
+    VALUES (${DEV_USER_ID}, 'dev@example.com', 'Dev User')
+    ON CONFLICT (id) DO NOTHING`;
+}
 
 export { closeDb } from '#src/db.ts';

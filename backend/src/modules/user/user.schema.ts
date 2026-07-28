@@ -21,53 +21,25 @@ export const createUserBodySchema = Type.Object(
       minLength: 5,
       format: 'email',
     }),
-    country: Type.String({
-      example: 'France',
-      description: 'Country of residence',
-      maxLength: 50,
-      minLength: 4,
-    }),
-    postalCode: Type.String({
-      example: '10000',
-      description: 'Postal code',
-      maxLength: 10,
-      minLength: 4,
-    }),
-    street: Type.String({
-      example: 'Grande Rue',
-      description: 'Street',
-      maxLength: 50,
-      minLength: 5,
+    name: Type.String({
+      example: 'John Doe',
+      description: 'Display name',
+      maxLength: 100,
+      minLength: 1,
     }),
   },
   { title: 'CreateUserRequest' },
 );
 export type CreateUserBody = Static<typeof createUserBodySchema>;
 
-/** GET /api/v1/users querystring — pagination plus optional filters */
+/** GET /api/v1/users querystring — pagination plus an optional email filter */
 export const findUsersQuerySchema = Type.Object({
   ...paginationQuerySchema,
-  country: Type.Optional(
+  email: Type.Optional(
     Type.String({
-      example: 'France',
-      description: 'Country of residence',
-      maxLength: 50,
-      pattern: '^[ A-Za-z]*$',
-    }),
-  ),
-  postalCode: Type.Optional(
-    Type.String({
-      example: '10000',
-      description: 'Postal code',
-      maxLength: 10,
-    }),
-  ),
-  street: Type.Optional(
-    Type.String({
-      example: 'Grande Rue',
-      description: 'Street',
-      maxLength: 50,
-      pattern: '^[ A-Za-z]*$',
+      example: 'john@gmail.com',
+      description: 'Exact email address to filter on',
+      maxLength: 320,
     }),
   ),
 });
@@ -103,21 +75,9 @@ export const userResponseSchema = Type.Object(
       format: 'email',
       description: "User's email address",
     }),
-    country: Type.String({
-      example: 'France',
-      description: "User's country of residence",
-    }),
-    postalCode: Type.String({
-      example: '123456',
-      description: 'Postal code',
-    }),
-    street: Type.String({
-      example: 'Park Avenue',
-      description: 'Street where the user is registered',
-    }),
-    role: Type.Union([Type.Literal('admin'), Type.Literal('moderator'), Type.Literal('guest')], {
-      example: 'guest',
-      description: "User's role",
+    name: Type.String({
+      example: 'John Doe',
+      description: "User's display name",
     }),
   },
   { title: 'UserResponse' },

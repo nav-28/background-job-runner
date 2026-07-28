@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, beforeEach, describe, it } from 'node:test';
-import { buildTestApp, closeDb, truncateUsers, validUser } from '#tests/helpers.ts';
+import { buildTestApp, closeDb, truncateAll, validUser } from '#tests/helpers.ts';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -13,8 +13,8 @@ describe('users API', async () => {
 
   const findUsers = (query = '') => app.inject({ method: 'GET', url: `/api/v1/users${query}` });
 
-  before(truncateUsers);
-  beforeEach(truncateUsers);
+  before(truncateAll);
+  beforeEach(truncateAll);
   after(async () => {
     await app.close();
     await closeDb();
@@ -41,9 +41,9 @@ describe('users API', async () => {
   describe('POST /api/v1/users validation', () => {
     const invalid = [
       ['malformed email', { ...validUser, email: 'not-an-email' }],
-      ['missing email', { country: 'England', street: 'Road Avenue', postalCode: '29145' }],
-      ['country too short', { ...validUser, country: 'a' }],
-      ['postal code too long', { ...validUser, postalCode: '1'.repeat(11) }],
+      ['missing email', { name: 'John Doe' }],
+      ['missing name', { email: 'john.doe@gmail.com' }],
+      ['name too long', { ...validUser, name: 'a'.repeat(101) }],
     ] as const;
 
     for (const [name, body] of invalid) {
@@ -74,21 +74,25 @@ describe('users API', async () => {
       assert.equal(body.count, 1);
       assert.equal(body.data.length, 1);
       assert.equal(body.data[0].email, validUser.email);
-      assert.equal(body.data[0].role, 'guest');
+      assert.equal(body.data[0].name, validUser.name);
       // Dates must cross the wire as ISO strings, not Date objects.
       assert.equal(typeof body.data[0].createdAt, 'string');
       assert.equal(new Date(body.data[0].createdAt).toISOString(), body.data[0].createdAt);
     });
 
-    it('filters by country', async () => {
+    it('filters by email', async () => {
       await createUser(validUser);
-      await createUser({ ...validUser, email: 'jane@gmail.com', country: 'France' });
+      await createUser({
+        ...validUser,
+        email: 'jane@gmail.com',
+        name: 'Jane Doe',
+      });
 
-      const res = await findUsers('?country=France');
+      const res = await findUsers('?email=jane@gmail.com');
       const body = res.json();
 
       assert.equal(body.count, 1);
-      assert.equal(body.data[0].country, 'France');
+      assert.equal(body.data[0].email, 'jane@gmail.com');
     });
 
     it('paginates, reporting the unfiltered total', async () => {
@@ -119,7 +123,10 @@ describe('users API', async () => {
     it('deletes a user', async () => {
       const { id } = (await createUser(validUser)).json();
 
-      const res = await app.inject({ method: 'DELETE', url: `/api/v1/users/${id}` });
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/users/${id}`,
+      });
       assert.equal(res.statusCode, 204);
 
       assert.equal((await findUsers()).json().count, 0);

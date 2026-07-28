@@ -40,6 +40,32 @@ services:
       postgres:
         condition: service_healthy
 
+  # Web DB console for local inspection. Behind the `tools` profile so it never
+  # starts as part of the normal stack:
+  #   docker compose --profile tools up -d pgadmin   ->  http://localhost:5050
+  # Do not enable this profile on a deployed host.
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    profiles: ["tools"]
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: dev@example.com
+      PGADMIN_DEFAULT_PASSWORD: test
+      # Desktop mode, no master password: opens straight into the UI locally.
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_LISTEN_PORT: 5050
+    ports:
+      # Loopback only — this is a local tool, not something to expose.
+      - "127.0.0.1:5050:5050"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      # Pre-registers the local server, since `down -v` wipes pgadmin_data too.
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   backend:
     build: ./backend
     restart: unless-stopped
@@ -81,3 +107,4 @@ services:
 
 volumes:
   pgdata:
+  pgadmin_data:
