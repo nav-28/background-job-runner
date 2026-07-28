@@ -46,6 +46,25 @@ module calling `import { findUserByEmail } from '../user/user.service.ts'` is co
 
 `src/app.ts` registers every plugin and route explicitly. Reading it tells you the whole API surface.
 
+### The engine (`src/engine/`)
+
+`src/engine/` is deliberately **not** a module. It is a standalone orchestration library that
+happens to live in this repo: it owns the task queue, the worker pool, handle allocation and the
+task lifecycle state machine.
+
+- It **never imports Fastify.** The HTTP layer is one client of it, the tests are another. Anything
+  it needs from a request is passed in as an argument.
+- Postgres is the source of truth. Everything the engine holds in memory — in-flight abort
+  controllers, slot accounting, event subscribers — is either rebuildable from the database or
+  safely discarded on restart.
+- The `Engine` interface in `src/engine/types.ts` **is** the public surface. `OrchestrationEngine`
+  implements it; `createEngine(config)` is the wiring helper that resolves defaults and returns
+  one. Nothing outside `src/engine/` imports any other file in there.
+- The engine knows no lanes. Workers are injected by whoever constructs it — the Fastify plugin in
+  production, the test itself in tests. Adding a worker is one entry in one array.
+
+The route → service → repository rule above applies to `src/modules/*`, not here.
+
 ## Adding a module
 
 Copy `src/modules/user/` — it is the reference implementation.
@@ -65,8 +84,15 @@ Copy `src/modules/user/` — it is the reference implementation.
 ### Style
 - Biome enforces: single quotes, 2-space indent, trailing commas, semicolons, LF, 100 col
 - File naming: `kebab-case` (enforced by Biome)
-- No enums — use `const` objects with derived types (see `UserRole` in `user.types.ts`)
-- No classes for business logic — plain functions
+- No enums — use `const` objects with derived types (see `LogLevel` in `src/config/env.ts`)
+- Classes where there is lifecycle and mutable state to own (the engine, its runner, the event
+  bus). Plain functions everywhere else — modules, services, repositories, pure helpers. A class
+  that is only a namespace for stateless functions is a module in disguise; don't write one
+- A class with a public contract declares `implements <Interface>`, and that interface is the
+  documentation of its surface. Never derive a public type from an implementation with
+  `ReturnType<typeof …>`
+- Public methods that may be detached (passed as callbacks, destructured, handed to a route) are
+  arrow-function properties. Internal helpers are ordinary private methods
 - No `any` — `noExplicitAny` is an error (relaxed in tests)
 - No `console` — use `fastify.log` / the injected logger
 
@@ -105,12 +131,12 @@ Copy `src/modules/user/` — it is the reference implementation.
   ``db`SELECT * FROM users WHERE id = ${id}` ``
 - Build optional `WHERE` clauses with `joinConditions()`
 - Multi-statement writes go through `withTransaction()`
-- Column names are camelCase and must be quoted: `db`"postalCode" = ${x}``
+- Column names are camelCase and must be quoted: `db`"handleNum" = ${x}``
 
 ### Testing
 - Unit tests: `*.spec.ts` next to the source, pure functions only, no I/O
 - Integration tests: `tests/*.test.ts` driving the app with `app.inject()` against a real database
-- Use `buildTestApp()` and `truncateUsers()` from `#tests/helpers.ts`
+- Use `buildTestApp()`, `truncateAll()` and `ensureDevUser()` from `#tests/helpers.ts`
 - Prefer an integration test over mocking a repository — they're fast (the whole suite runs in
   well under a second) and they actually exercise the SQL
 
