@@ -49,8 +49,9 @@ export async function buildApp(overrides: FastifyServerOptions = {}, options: Ap
   });
 
   // Origins come from CORS_ORIGIN (comma-separated). Unset means: allow the local
-  // Next.js frontend in development, and disable CORS in production (there the
-  // frontend calls the API same-origin through its Next.js proxy).
+  // Next.js frontend in development, and deny every cross-origin browser request
+  // in production. The frontend is deployed on its own subdomain and calls this
+  // API directly, so a deployment MUST set CORS_ORIGIN to that origin.
   await app.register(Cors, {
     origin: env.server.corsOrigin
       ? env.server.corsOrigin.split(',').map((origin) => origin.trim())

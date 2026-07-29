@@ -146,10 +146,12 @@ bcrypt: the production image installs `--prod --ignore-scripts` on Alpine and ca
 - Every route declares TypeBox schemas — they validate requests, serialize responses **and** become
   the OpenAPI document the frontend generates its client from
 - Give response schemas a `title`; it shows up in the generated spec. Note that the client generator
-  names inline types after the operation (`CreateUserBody`, `FindUsers200`). If you want stable
-  hand-picked names instead, register schemas with `$id` via `app.addSchema()` and configure
-  `refResolver.buildLocalReference` in `src/plugins/swagger.ts` — deliberately not done here, since
-  it costs `$ref` indirection and loses response type inference.
+  names inline types after the operation (`CreateUserBody`, `FindUsers200`).
+  `refResolver.buildLocalReference` **is** configured in `src/plugins/swagger.ts`, so a schema
+  registered with `$id` via `app.addSchema()` — currently only `ApiErrorResponse` — appears in the
+  spec under that name rather than a positional `def-0`. Response schemas stay inline with a `title`
+  all the same: naming them via `$id` would cost `$ref` indirection and lose response type
+  inference.
 - Any list endpoint should use `paginationQuerySchema` / `paginatedResponseSchema` from
   `#src/lib/http.ts`, and its SQL **must** have an `ORDER BY` — pagination without one is
   nondeterministic in Postgres.

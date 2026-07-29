@@ -3,7 +3,7 @@
  * Do not edit manually.
  * web-app-template API
  * REST API for web-app-template.
- * OpenAPI spec version: 0.0.0
+ * OpenAPI spec version: 0.1.0
  */
 
 import type {

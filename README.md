@@ -13,7 +13,7 @@ flowchart LR
     UI["Next.js UI<br/>(MUI + TanStack Query)"]
   end
   subgraph Frontend[":3001 · Next.js server"]
-    Proxy["/api/* proxy (rewrite)"]
+    App["serves the app shell"]
   end
   subgraph Backend[":3000 · Fastify"]
     API["REST /api/v1/*"]
@@ -21,8 +21,8 @@ flowchart LR
   end
   DB[("Postgres :5432")]
 
-  UI -->|"generated hooks → /api/*"| Proxy
-  Proxy -->|proxied, no CORS| API
+  App -.->|HTML/JS| UI
+  UI -->|"generated hooks → NEXT_PUBLIC_API_URL (CORS)"| API
   API --> DB
   Spec -.->|"pnpm generate:api:live"| UI
 ```
@@ -79,9 +79,10 @@ users end-to-end through the generated client. Backend API docs (Swagger UI) are
    pnpm generate:api:live   # pull a fresh spec from the running backend, then generate
    ```
 
-3. In the browser the client calls **relative** `/api/*` URLs. The Next.js server **proxies** those to
-   the backend (`BACKEND_URL`, see `frontend/next.config.ts`), so there's **no CORS** in the common case.
-   To call the backend directly instead, set `NEXT_PUBLIC_API_URL`; the backend's CORS allow-list is the
+3. In the browser the client calls the backend **directly** at `NEXT_PUBLIC_API_URL` — there is no
+   Next.js proxy, which matches the deployed layout (frontend and API on sibling subdomains). Being a
+   `NEXT_PUBLIC_*` variable it is inlined into the client bundle at build time, so it must be set for
+   `next build`, not just at runtime. CORS therefore always applies: the backend's allow-list is the
    `CORS_ORIGIN` env var (defaults to `http://localhost:3001` in development).
 
 The generated client is committed so the frontend builds out of the box; regenerate it whenever the

@@ -19,6 +19,11 @@ async function swaggerPlugin(fastify: FastifyInstance) {
         version: process.env.npm_package_version ?? '0.0.0',
       },
     },
+    // A fix for schemas whos names are not generated correctly
+    refResolver: {
+      buildLocalReference: (json, _baseUri, _fragment, i) =>
+        typeof json.$id === 'string' ? json.$id : `def-${i}`,
+    },
   });
 
   await fastify.register(SwaggerUI, { routePrefix: '/api-docs' });

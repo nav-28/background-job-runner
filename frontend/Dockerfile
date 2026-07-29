@@ -17,14 +17,13 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Next.js evaluates rewrites() during `next build` and bakes the result into
-# .next/routes-manifest.json, so the backend origin must be known at BUILD time —
-# setting BACKEND_URL only at runtime is too late and the proxy would fall back
-# to localhost:3000. Override with: --build-arg BACKEND_URL=...
-ARG BACKEND_URL=http://backend:3000
-ENV BACKEND_URL=${BACKEND_URL}
-# Client-side API base URL: empty string => same-origin, handled by the Next rewrite proxy.
-ENV NEXT_PUBLIC_API_URL=""
+# Base URL the browser uses to reach the API. NEXT_PUBLIC_* values are inlined
+# into the client bundle by `next build`, so this must be known at BUILD time —
+# setting it only at runtime is too late and the bundle keeps the baked-in value.
+# It must be an origin the *browser* can resolve, not a Docker network hostname.
+# Override with: --build-arg NEXT_PUBLIC_API_URL=...
+ARG NEXT_PUBLIC_API_URL=http://localhost:3000
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 
@@ -32,8 +31,6 @@ RUN pnpm build
 FROM base AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-# Backend origin the Next.js proxy forwards /api/* to (override in compose).
-ENV BACKEND_URL=http://backend:3000
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001 -G nodejs
 

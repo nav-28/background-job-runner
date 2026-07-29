@@ -18,13 +18,15 @@ Next.js (App Router) frontend for the template. Talks to the Fastify backend thr
 ## Getting started
 
 ```bash
-cp .env.example .env.local          # optional; defaults work for local dev
+cp .env.example .env.local          # required: sets NEXT_PUBLIC_API_URL
 pnpm dev                            # http://localhost:3001
 ```
 
-The dev server proxies `/api/*` to the backend (`BACKEND_URL`, default
-`http://localhost:3000`) via `next.config.ts`, so the browser talks to the frontend
-origin only — no CORS in the common case.
+The browser calls the backend **directly** at `NEXT_PUBLIC_API_URL` (default
+`http://localhost:3000`) — there is no Next.js rewrite proxy, matching the
+deployed layout where the two live on sibling subdomains. That means CORS is
+always in play: the backend's `CORS_ORIGIN` must name this frontend's origin
+(it defaults to `http://localhost:3001` in development).
 
 ## Generating the API client
 
@@ -76,6 +78,5 @@ See `src/app/users/page.tsx` for a full CRUD example.
 
 | Variable              | Purpose                                                                 |
 | --------------------- | ----------------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL` | Base URL prepended to API requests. Empty = same-origin (proxied).      |
-| `BACKEND_URL`         | Where the Next.js proxy forwards `/api/*` (server-side only).           |
+| `NEXT_PUBLIC_API_URL` | **Required.** Absolute backend origin. Inlined at build time.           |
 | `OPENAPI_URL`         | Spec URL used by `generate:api:live`.                                    |

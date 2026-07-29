@@ -2,13 +2,6 @@
 
 import { createTheme } from '@mui/material/styles';
 
-/**
- * MUI theme with CSS-variable-based light/dark color schemes.
- *
- * `colorSchemeSelector: 'class'` lets us toggle the mode manually (via
- * `useColorScheme()`), and pairs with `<InitColorSchemeScript attribute="class" />`
- * in the root layout to avoid a flash of the wrong theme on first paint.
- */
 const theme = createTheme({
   cssVariables: {
     colorSchemeSelector: 'class',

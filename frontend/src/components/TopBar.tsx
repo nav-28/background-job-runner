@@ -9,10 +9,7 @@ import Typography from '@mui/material/Typography';
 import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
 
-const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/users', label: 'Users' },
-];
+const navLinks = [{ href: '/', label: 'Home' }];
 
 export default function TopBar() {
   return (

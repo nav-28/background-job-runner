@@ -1,6 +1,7 @@
 # Full-stack local/prod-like environment: Postgres + migrations + Fastify backend + Next.js frontend.
 #   docker compose up --build
-# Then open http://localhost:3001 (frontend) — API is proxied to the backend.
+# Then open http://localhost:3001 (frontend); the browser calls the API directly
+# on http://localhost:3000
 #
 # Migrations run automatically: the one-shot `migrate` service applies them once
 # Postgres is healthy, and the backend waits for it to finish before starting.
@@ -56,7 +57,6 @@ services:
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
       PGADMIN_LISTEN_PORT: 5050
     ports:
-      # Loopback only — this is a local tool, not something to expose.
       - "127.0.0.1:5050:5050"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
@@ -82,10 +82,6 @@ services:
       CORS_ORIGIN: http://localhost:3001
       JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-jwt-secret-change-me-in-production-0123456789}
       SESSION_TTL_SECONDS: 14400
-      # ── Orchestration engine ──────────────────────────────────────────────
-      # Every EngineConfig knob; see backend/docs/OrchestrationEngine.md §17.
-      # ENGINE_BOOT_SWEEP must be false if this service is ever scaled past one
-      # replica — a second process booting would requeue its peers' live work.
       ENGINE_CONCURRENCY: 4
       ENGINE_POLL_INTERVAL_MS: 200
       ENGINE_LEASE_MS: 30000
@@ -107,12 +103,10 @@ services:
     build:
       context: ./frontend
       args:
-        BACKEND_URL: http://backend:3000
+        NEXT_PUBLIC_API_URL: http://localhost:3000
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      # The Next.js server proxies /api/* to the backend container.
-      BACKEND_URL: http://backend:3000
     ports:
       - "3001:3001"
     depends_on:
