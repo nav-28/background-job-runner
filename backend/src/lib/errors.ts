@@ -27,6 +27,18 @@ export class BadRequestError extends AppError {
   readonly error = 'Bad Request';
 }
 
+/** 401 — no credential was supplied, or the one supplied was invalid, expired or revoked. */
+export class UnauthorizedError extends AppError {
+  readonly statusCode = 401;
+  readonly error = 'Unauthorized';
+}
+
+/** 403 — the credential is valid, but it is not allowed to do this. */
+export class ForbiddenError extends AppError {
+  readonly statusCode = 403;
+  readonly error = 'Forbidden';
+}
+
 /** 404 */
 export class NotFoundError extends AppError {
   readonly statusCode = 404;

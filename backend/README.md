@@ -43,30 +43,60 @@ src/
 ├── db.ts               postgres.js singleton, joinConditions, withTransaction
 ├── lib/
 │   ├── errors.ts       AppError subclasses → HTTP status codes
-│   └── http.ts         shared TypeBox: id/error/pagination schemas + helpers
-├── plugins/            error handler, request context, swagger  (Fastify plugins)
+│   ├── http.ts         shared TypeBox: id/error/pagination schemas + helpers
+│   └── password.ts     scrypt password hashing (node:crypto, no native deps)
+├── plugins/            error handler, request context, auth, swagger  (Fastify plugins)
 └── modules/
-    └── user/           one feature = one folder
-        ├── user.routes.ts       HTTP: schemas, status codes. No logic.
-        ├── user.service.ts      business logic. No HTTP, no SQL.
-        ├── user.repository.ts   SQL. No HTTP, no logic.
-        ├── user.schema.ts       TypeBox request/response schemas
-        └── user.types.ts        domain types
+    ├── apikey/         one feature = one folder
+    │   ├── apikey.routes.ts       HTTP: schemas, status codes. No logic.
+    │   ├── apikey.service.ts      business logic. No HTTP, no SQL.
+    │   ├── apikey.repository.ts   SQL. No HTTP, no logic.
+    │   ├── apikey.schema.ts       TypeBox request/response schemas
+    │   └── apikey.types.ts        domain types
+    ├── auth/           signup / login / logout / me
+    └── user/           data layer behind auth — no routes of its own
 tests/
 ├── helpers.ts          buildTestApp() + truncation
-└── user.test.ts        integration tests through app.inject()
+├── auth.test.ts        integration tests through app.inject()
+└── apikey.test.ts
 ```
 
-`src/modules/user/` is the reference example — copy it when adding a feature.
+`src/modules/apikey/` is the reference example — copy it when adding a feature.
+
+## Auth
+
+Two credential kinds resolve to the same `userId`, both handled by one `onRequest` hook in
+`src/plugins/auth.ts`:
+
+- **humans** — a 4-hour JWT in an HttpOnly, SameSite=Lax, host-only cookie, issued by
+  `/auth/signup` and `/auth/login` (also returned in the body for curl and tests)
+- **machines** — a long-lived revocable API key, `Authorization: Bearer jrk_…`
+
+Auth is **opt-in per route**; a route that declares nothing costs nothing.
+
+```ts
+app.get('/thing', { config: { auth: true } }, handler)                     // either kind
+app.post('/keys', { config: { auth: { session: true, apiKey: false } } })  // humans only
+```
+
+Handlers read the caller with `const { userId } = requireAuth(req)`. Missing/invalid/expired/revoked
+credentials are **401**; a valid credential of a kind the route does not accept is **403**.
+
+`JWT_SECRET` is required with no default — the app refuses to boot without it.
 
 ## Key endpoints
 
-| Path             | Description               |
-| ---------------- | ------------------------- |
-| `/api/v1/users`  | Users REST resource       |
-| `/api-docs`      | Swagger UI                |
-| `/api-docs/json` | OpenAPI JSON (client gen) |
-| `/health`        | Health check              |
+| Path                  | Auth         | Description                             |
+| --------------------- | ------------ | --------------------------------------- |
+| `/api/v1/auth/signup` | public       | Create an account, start a session      |
+| `/api/v1/auth/login`  | public       | Exchange email + password for a session |
+| `/api/v1/auth/logout` | public       | Clear the session cookie                |
+| `/api/v1/auth/me`     | session/key  | The caller and how they authenticated   |
+| `/api/v1/keys`        | session only | List / create API keys                  |
+| `/api/v1/keys/{id}`   | session only | Revoke an API key                       |
+| `/api-docs`           | public       | Swagger UI                              |
+| `/api-docs/json`      | public       | OpenAPI JSON (client gen)               |
+| `/health`             | public       | Health check                            |
 
 ## Scripts
 

@@ -67,7 +67,8 @@ The route → service → repository rule above applies to `src/modules/*`, not 
 
 ## Adding a module
 
-Copy `src/modules/user/` — it is the reference implementation.
+Copy `src/modules/apikey/` — it is the reference implementation. (`src/modules/user/` has no
+routes: it is the data layer the auth module calls, kept deliberately without an HTTP surface.)
 
 1. `src/modules/<name>/<name>.types.ts` — domain types
 2. `src/modules/<name>/<name>.schema.ts` — TypeBox request/response schemas
@@ -78,6 +79,27 @@ Copy `src/modules/user/` — it is the reference implementation.
 7. `pnpm db:create-migration <name>` for schema changes
 8. Add integration tests in `tests/<name>.test.ts`
 9. `pnpm check`
+
+## Auth
+
+`src/plugins/auth.ts` resolves both credential kinds (session JWT cookie/bearer, and `jrk_…` API
+keys) in one global `onRequest` hook. Routes opt in with `config: { auth: … }`; a route that
+declares nothing is public and pays nothing.
+
+```ts
+app.get('/thing',  { config: { auth: true } }, handler)                    // either kind
+app.post('/keys',  { config: { auth: { session: true, apiKey: false } } }) // humans only
+```
+
+In the object form a kind is allowed only when it is explicitly `true` — omitting one denies it.
+Handlers read the caller with `const { userId } = requireAuth(req)`; never touch
+`req.authContext` directly and never assert it with `!`.
+
+- **401** — no credential, or invalid/expired/revoked. One message for all of them, on purpose.
+- **403** — valid credential, wrong kind for this route.
+
+Passwords go through `#src/lib/password.ts` (scrypt, no native dependency). Never add argon2 or
+bcrypt: the production image installs `--prod --ignore-scripts` on Alpine and cannot build them.
 
 ## Coding conventions
 
@@ -118,9 +140,9 @@ Copy `src/modules/user/` — it is the reference implementation.
   nondeterministic in Postgres.
 
 ### Errors
-- Throw `AppError` subclasses from `#src/lib/errors.ts` (`BadRequestError`, `NotFoundError`,
-  `ConflictError`, `DatabaseError`). The error handler maps them to status codes and attaches a
-  correlation id.
+- Throw `AppError` subclasses from `#src/lib/errors.ts` (`BadRequestError`, `UnauthorizedError`,
+  `ForbiddenError`, `NotFoundError`, `ConflictError`, `DatabaseError`). The error handler maps them
+  to status codes and attaches a correlation id.
 - Translate infrastructure errors at the boundary: the repository turns Postgres `23505` into
   `ConflictError` so callers never see a driver error.
 - Anything not an `AppError` becomes a logged 500 — internals never reach the client.

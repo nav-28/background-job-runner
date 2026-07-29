@@ -5,6 +5,8 @@ import fp from 'fastify-plugin';
 declare module '@fastify/request-context' {
   interface RequestContextData {
     requestId: string;
+    /** Set by the auth plugin once a credential resolves, so logs can carry it. */
+    userId?: string;
   }
 }
 
@@ -22,6 +24,11 @@ async function requestContextPlugin(fastify: FastifyInstance) {
 /** Current request id, or a sentinel when called outside a request (e.g. at boot). */
 export function getRequestId(): string {
   return requestContext.get('requestId') ?? 'no-request-context';
+}
+
+/** Authenticated caller, set by the auth plugin. Undefined on public routes. */
+export function getUserId(): string | undefined {
+  return requestContext.get('userId');
 }
 
 export default fp(requestContextPlugin, { name: 'requestContext' });

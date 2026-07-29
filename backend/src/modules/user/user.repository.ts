@@ -1,7 +1,6 @@
-import { getDb, joinConditions } from '#src/db.ts';
+import { getDb } from '#src/db.ts';
 import { ConflictError, DatabaseError } from '#src/lib/errors.ts';
-import type { Paginated } from '#src/lib/http.ts';
-import type { User, UserFilters } from '#src/modules/user/user.types.ts';
+import type { User } from '#src/modules/user/user.types.ts';
 
 const UNIQUE_VIOLATION = '23505'; // https://www.postgresql.org/docs/current/errcodes-appendix.html
 
@@ -16,7 +15,7 @@ export async function insert(user: User): Promise<void> {
   const db = getDb();
   try {
     await db`
-      INSERT INTO users ${db(user, 'id', 'createdAt', 'updatedAt', 'email', 'name')}
+      INSERT INTO users ${db(user, 'id', 'createdAt', 'updatedAt', 'email', 'name', 'passwordHash')}
     `;
   } catch (error: unknown) {
     if (error instanceof Error && 'code' in error && error.code === UNIQUE_VIOLATION) {
@@ -29,29 +28,15 @@ export async function insert(user: User): Promise<void> {
   }
 }
 
-export async function findAllPaginated(
-  { limit, offset, page }: { limit: number; offset: number; page: number },
-  filters: UserFilters = {},
-): Promise<Paginated<User>> {
+export async function findById(id: string): Promise<User | null> {
   const db = getDb();
-  const where = joinConditions([filters.email && db`email = ${filters.email}`]);
-
-  // ORDER BY is required for stable pagination — without it Postgres may return
-  // rows in a different order per page and items can repeat or be skipped.
-  const [rows, [{ count }]] = await Promise.all([
-    db<User[]>`
-      SELECT * FROM users ${where}
-      ORDER BY "createdAt" DESC, id DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `,
-    db<{ count: string }[]>`SELECT COUNT(*) as count FROM users ${where}`,
-  ]);
-
-  return { data: [...rows], count: Number(count), limit, page };
+  const [user] = await db<User[]>`SELECT * FROM users WHERE id = ${id}`;
+  return user ?? null;
 }
 
-export async function deleteById(id: string): Promise<boolean> {
+/** Email is normalised to lowercase by the service, so this is an exact match. */
+export async function findByEmail(email: string): Promise<User | null> {
   const db = getDb();
-  const result = await db`DELETE FROM users WHERE id = ${id}`;
-  return result.count > 0;
+  const [user] = await db<User[]>`SELECT * FROM users WHERE email = ${email}`;
+  return user ?? null;
 }

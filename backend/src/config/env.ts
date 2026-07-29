@@ -27,6 +27,12 @@ const schema = Type.Object({
   // Comma-separated list of allowed CORS origins (e.g. "http://localhost:3001,https://app.example.com").
   // Leave empty to fall back to the sensible default (dev: allow the local frontend; prod: disabled).
   CORS_ORIGIN: Type.Optional(Type.String()),
+  // Signs session JWTs. Deliberately has NO default: a shipped default signing key
+  // is forgeable by anyone who has read the repo, so the app must refuse to boot
+  // rather than come up quietly insecure.
+  JWT_SECRET: Type.String({ minLength: 32 }),
+  // Session lifetime, in seconds. Also the cookie's Max-Age.
+  SESSION_TTL_SECONDS: Type.Number({ default: 14_400, minimum: 60 }),
 });
 
 const env = envSchema<Static<typeof schema>>({
@@ -49,5 +55,9 @@ export default {
   },
   db: {
     url: `postgres://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${env.POSTGRES_URL}/${env.POSTGRES_DB}?sslmode=disable`,
+  },
+  auth: {
+    jwtSecret: env.JWT_SECRET,
+    sessionTtlSeconds: env.SESSION_TTL_SECONDS,
   },
 };

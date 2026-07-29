@@ -16,9 +16,11 @@ export async function truncateAll() {
   await getDb()`TRUNCATE TABLE task_events, tasks, api_keys, users`;
 }
 
+/** A signup body that passes validation. */
 export const validUser = {
   email: 'john.doe@gmail.com',
   name: 'John Doe',
+  password: 'password123',
 };
 
 export const DEV_USER_ID = '00000000-0000-4000-8000-000000000001';

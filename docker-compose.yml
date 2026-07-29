@@ -80,6 +80,8 @@ services:
       POSTGRES_DB: test
       # Allow the browser-facing frontend origin (used if the client calls the API directly).
       CORS_ORIGIN: http://localhost:3001
+      JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-jwt-secret-change-me-in-production-0123456789}
+      SESSION_TTL_SECONDS: 14400
     ports:
       - "3000:3000"
     depends_on:
@@ -92,8 +94,6 @@ services:
     build:
       context: ./frontend
       args:
-        # Must be a BUILD arg: Next.js bakes rewrites() into the build manifest,
-        # so a runtime-only value would leave the proxy pointing at localhost.
         BACKEND_URL: http://backend:3000
     restart: unless-stopped
     environment:
