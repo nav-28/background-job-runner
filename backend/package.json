@@ -27,6 +27,8 @@
     "db:rollback": "dbmate -e DBMATE_DATABASE_URL --no-dump-schema down",
     "db:create-seed": "dbmate -e DBMATE_DATABASE_URL -d ./db/seeds/ new",
     "db:seed": "dbmate -e DBMATE_DATABASE_URL -d ./db/seeds/ up",
+    "db:seed:down": "dbmate -e DBMATE_DATABASE_URL -d ./db/seeds/ down",
+    "db:seed:reset": "pnpm db:seed:down && pnpm db:seed:down && pnpm db:seed",
     "postinstall": "husky"
   },
   "engines": {
@@ -40,6 +42,7 @@
     "@fastify/helmet": "13.1.0",
     "@fastify/jwt": "10.2.1",
     "@fastify/request-context": "6.2.1",
+    "@fastify/sse": "0.6.0",
     "@fastify/swagger": "9.8.1",
     "@fastify/swagger-ui": "5.2.6",
     "@fastify/type-provider-typebox": "6.1.0",

@@ -1,22 +1,35 @@
-import { buildApp } from '#src/app.ts';
+import { type AppOptions, buildApp } from '#src/app.ts';
 import { getDb } from '#src/db.ts';
 
-/** A ready Fastify instance that never binds a port — drive it with app.inject(). */
-export async function buildTestApp() {
-  const app = await buildApp({ logger: { level: 'silent' } });
+/**
+ * A ready Fastify instance that never binds a port — drive it with app.inject().
+ *
+ * The engine is built but NOT started. A live claim loop would race `truncateAll()`: it claims
+ * rows an unrelated suite has just truncated and writes events for tasks that no longer exist.
+ * A test that needs work to actually execute says so out loud:
+ *
+ *     const app = await buildTestApp({ engine: { config: { concurrency: 2 } } });
+ *     await app.engine.start();
+ */
+export async function buildTestApp(options: AppOptions = {}) {
+  const app = await buildApp(
+    {
+      logger: { level: 'silent' },
+      // A test app must never be able to hang on close. Fastify's default waits for non-idle
+      // connections, and an open SSE stream is never idle — `tests/events.test.ts` binds a real
+      // port and `app.close()` would block on it forever if a client failed to disconnect.
+      forceCloseConnections: true,
+    },
+    { ...options, engine: { autostart: false, ...options.engine } },
+  );
   await app.ready();
   return app;
 }
 
-/**
- * Tables are listed together rather than with CASCADE: users is referenced by
- * api_keys and tasks, so Postgres refuses to truncate it alone.
- */
 export async function truncateAll() {
   await getDb()`TRUNCATE TABLE task_events, tasks, api_keys, users`;
 }
 
-/** A signup body that passes validation. */
 export const validUser = {
   email: 'john.doe@gmail.com',
   name: 'John Doe',

@@ -27,7 +27,6 @@ export const AuthKind = {
 } as const;
 export type AuthKind = (typeof AuthKind)[keyof typeof AuthKind];
 
-/** Who is making this request, and with what. */
 export interface AuthContext {
   userId: string;
   kind: AuthKind;
@@ -68,7 +67,6 @@ function sessionCookieOptions(): CookieSerializeOptions {
   };
 }
 
-/** Signs a session token for a user. TTL comes from the plugin's sign options. */
 export function signSessionToken(app: FastifyInstance, userId: string): string {
   return app.jwt.sign({ sub: userId });
 }
@@ -77,16 +75,11 @@ export function setSessionCookie(res: FastifyReply, token: string): void {
   res.setCookie(SESSION_COOKIE, token, sessionCookieOptions());
 }
 
-/** Attributes must match the ones it was set with, or the browser keeps the cookie. */
 export function clearSessionCookie(res: FastifyReply): void {
   const { maxAge: _maxAge, ...options } = sessionCookieOptions();
   res.clearCookie(SESSION_COOKIE, options);
 }
 
-/**
- * Reads the auth context a route required. Routes call this instead of touching
- * `request.authContext`, so handlers get a non-optional value with no `!`.
- */
 export function requireAuth(req: FastifyRequest): AuthContext {
   if (!req.authContext) {
     throw new UnauthorizedError('Authentication required');
@@ -94,7 +87,6 @@ export function requireAuth(req: FastifyRequest): AuthContext {
   return req.authContext;
 }
 
-/** The token from `Authorization: Bearer …`, or null. The scheme is case-insensitive. */
 function readBearerToken(req: FastifyRequest): string | null {
   const header = req.headers.authorization;
   if (!header?.toLowerCase().startsWith(BEARER_SCHEME)) {
@@ -105,7 +97,6 @@ function readBearerToken(req: FastifyRequest): string | null {
   return token.length > 0 ? token : null;
 }
 
-/** Invalid, expired and unparseable tokens are all just "no identity". */
 function verifySessionToken(app: FastifyInstance, token: string): AuthContext | null {
   try {
     const payload = app.jwt.verify<{ sub?: unknown }>(token);
@@ -126,8 +117,7 @@ async function verifyApiKeyToken(token: string): Promise<AuthContext | null> {
  * Bearer header first, session cookie second.
  *
  * A bearer token is treated as an API key when it carries the key prefix, and as a
- * JWT otherwise. Discriminating on the prefix rather than sniffing for JWT dots is
- * explicit, and it is what makes keys greppable by secret scanners.
+ * JWT otherwise.
  */
 async function resolveCredential(
   app: FastifyInstance,
@@ -145,8 +135,7 @@ async function resolveCredential(
 }
 
 /**
- * Fail-closed: in the object form a kind is allowed only when it is explicitly
- * `true`, so `{ session: true }` is session-only rather than silently open.
+ * 2 kinds of auth, API and JWT and some routes may only use one
  */
 function isKindAllowed(config: AuthRouteConfig, kind: AuthKind): boolean {
   if (config === true) {
@@ -167,8 +156,6 @@ async function authPlugin(fastify: FastifyInstance) {
     // and puts the result on `request.authContext`. Don't build on `request.user`.
   });
 
-  // Fastify wants a declared shape on the prototype rather than a property added
-  // per request; `undefined` keeps the hidden class stable.
   fastify.decorateRequest('authContext', undefined);
 
   fastify.addHook('onRequest', async (req) => {
@@ -179,8 +166,6 @@ async function authPlugin(fastify: FastifyInstance) {
 
     const context = await resolveCredential(fastify, req);
     if (!context) {
-      // One message for "nothing supplied" and "supplied but invalid/expired/revoked" —
-      // the distinction tells an attacker something and tells a client nothing.
       throw new UnauthorizedError('Authentication required');
     }
 
@@ -189,7 +174,6 @@ async function authPlugin(fastify: FastifyInstance) {
     }
 
     req.authContext = context;
-    // Alongside requestId, so every log line for this request carries the caller.
     requestContext.set('userId', context.userId);
   });
 }

@@ -82,6 +82,19 @@ services:
       CORS_ORIGIN: http://localhost:3001
       JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-jwt-secret-change-me-in-production-0123456789}
       SESSION_TTL_SECONDS: 14400
+      # ── Orchestration engine ──────────────────────────────────────────────
+      # Every EngineConfig knob; see backend/docs/OrchestrationEngine.md §17.
+      # ENGINE_BOOT_SWEEP must be false if this service is ever scaled past one
+      # replica — a second process booting would requeue its peers' live work.
+      ENGINE_CONCURRENCY: 4
+      ENGINE_POLL_INTERVAL_MS: 200
+      ENGINE_LEASE_MS: 30000
+      ENGINE_HEARTBEAT_MS: 10000
+      ENGINE_MAX_ATTEMPTS: 3
+      ENGINE_BACKOFF_BASE_MS: 500
+      ENGINE_BACKOFF_MAX_MS: 30000
+      ENGINE_JOB_TIMEOUT_MS: 300000
+      ENGINE_BOOT_SWEEP: "true"
     ports:
       - "3000:3000"
     depends_on:

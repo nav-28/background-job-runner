@@ -65,6 +65,21 @@ task lifecycle state machine.
 
 The route → service → repository rule above applies to `src/modules/*`, not here.
 
+`src/plugins/engine.ts` is the one place the engine, the process environment and the Fastify
+lifecycle meet. It reads every `ENGINE_*` variable, holds the `workers` array (**adding a lane is
+one entry in it**), decorates `app.engine`, starts the claim loop in `onReady` and drains it in
+`preClose`. Autostart defaults to `NODE_ENV !== 'test'` and `buildTestApp()` turns it off
+explicitly — a live claim loop racing `truncateAll()` poisons unrelated suites, so a test that
+needs work to execute calls `await app.engine.start()` itself.
+
+`preClose` rather than `onClose` is deliberate: `onClose` hooks run LIFO, so the `closeDb()` hook
+`src/index.ts` registers after `buildApp()` would run first and pull the connection out from under
+a draining worker.
+
+`src/modules/task/` is the engine's HTTP surface and has **no service and no repository** — the
+engine is the service layer. A handler reads the caller, calls one engine method, shapes the
+answer. That is the whole file.
+
 ## Adding a module
 
 Copy `src/modules/apikey/` — it is the reference implementation. (`src/modules/user/` has no
@@ -139,6 +154,46 @@ bcrypt: the production image installs `--prod --ignore-scripts` on Alpine and ca
   `#src/lib/http.ts`, and its SQL **must** have an `ORDER BY` — pagination without one is
   nondeterministic in Postgres.
 
+#### ⚠ Response schemas STRIP unlisted properties
+
+Fastify serialises with `fast-json-stringify`, which emits **only** the properties the response
+schema names. A `jsonb` column typed as `Type.Object({})` serialises `{"duration_ms":500}` as
+`{}` — a valid-looking, completely empty response, and a test asserting the key exists still
+passes. Anything free-form must be typed permissively:
+
+```ts
+Type.Unsafe<Record<string, unknown>>({ type: 'object', additionalProperties: true })  // open object
+Type.Unknown()   // emits `{}`, so fast-json-stringify falls back to JSON.stringify
+```
+
+`src/modules/task/task.schema.ts` does this for `params`, `result`, `error` and event `detail`, and
+`tests/task.test.ts` proves it with a deeply nested payload asserted by **structural equality** —
+a key-presence check would pass against a stripped `{}`.
+
+#### The three deliberate divergences in the task API
+
+Recorded here so they read as decisions rather than drift; the reasoning is in `README.md`.
+
+- `GET /tasks` returns a **bare array**, not the house `{count, limit, page, data}` envelope that
+  `GET /keys` still uses. The shape is fixed by an external contract, and a reviewer's
+  `res.json()[0].handle` must not break on a local convention. The inconsistency is intentional.
+- `GET /tasks/{handle}/result` returns **the whole task**, with `result` populated and
+  `collected: true`, rather than the bare result value — collecting is a state transition and the
+  caller wants the new state with it.
+- `GET /lanes` is **public**. Lane names and parameter descriptors only, no user data, and the
+  submit form has to render before login.
+
+#### Server-sent events
+
+`@fastify/sse` is registered globally in `src/app.ts`; a route opts in with `sse: 'only'`. Two
+things that are not obvious:
+
+- Attach **no response schema** to an SSE route — the serialiser would fight the plugin.
+- The plugin commits headers lazily, on the first frame. A stream that has nothing to send yet
+  must call `reply.sse.sendHeaders()` **and** `reply.raw.flushHeaders()`, or the client sees
+  nothing until the first event (`writeHead` only queues the head; Node puts it on the wire with
+  the first body byte).
+
 ### Errors
 - Throw `AppError` subclasses from `#src/lib/errors.ts` (`BadRequestError`, `UnauthorizedError`,
   `ForbiddenError`, `NotFoundError`, `ConflictError`, `DatabaseError`). The error handler maps them
@@ -159,6 +214,14 @@ bcrypt: the production image installs `--prod --ignore-scripts` on Alpine and ca
 - Unit tests: `*.spec.ts` next to the source, pure functions only, no I/O
 - Integration tests: `tests/*.test.ts` driving the app with `app.inject()` against a real database
 - Use `buildTestApp()`, `truncateAll()` and `ensureDevUser()` from `#tests/helpers.ts`
+- `buildTestApp()` builds the engine but does **not** start it. A test that needs work to run calls
+  `await app.engine.start()`, and stops it before truncating; pass
+  `buildTestApp({ engine: { config: { concurrency: 2 } } })` to tune the runner for one suite
+- `app.inject()` cannot test SSE — it buffers the response and a stream never ends. Bind an
+  ephemeral port (`app.listen({ port: 0 })`) and drive it with `fetch`
+- Anything that must survive a process death spawns `src/index.ts` as a child process. Poll
+  `/health` for readiness rather than sleeping, and kill every child in `after`, including on
+  failure — an orphaned backend is a second live runner against the test database
 - Prefer an integration test over mocking a repository — they're fast (the whole suite runs in
   well under a second) and they actually exercise the SQL
 
