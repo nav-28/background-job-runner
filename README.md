@@ -170,8 +170,12 @@ Backend conventions: [`backend/AGENTS.md`](backend/AGENTS.md).
 
 ## Github Codespaces
 
-This repo is setup up to work inside github codespaces. To test out the live server, make sure that 
-the backend api's visibility is set to `Public` so that the frontend can make API requests. 
+This repo is setup up to work inside github codespaces.
 
-If project doesn't run on its own, open a terminal and run `./.devcontainer/post-create.sh` to create
-the postgres container and seed the db. Then finally run `pnpm dev` to start the dev server.
+Codespaces will run this script `./.devcontainer/post-create.sh` to setup postgres and seed the db
+and create the env files. Look at the creation log to confirm this.
+
+You should see 3 ports in the `ports` tab corresponding to the backend (API), frontend (UI), and the db.
+Change the API port's visibility to public so that the frontend can connect to it from your browser.
+
+Finally, run the dev container with `pnpm dev`
