@@ -76,41 +76,6 @@ layer and owns every statement that touches `tasks`, so a handler reads the call
 engine method and shapes the answer. Adding a `task.service.ts` that forwards to `app.engine`
 would be a layer with nothing in it.
 
-## Auth
-
-Two credential kinds resolve to the same `userId`, both handled by one `onRequest` hook in
-`src/plugins/auth.ts`:
-
-- **humans** — a 4-hour JWT in an HttpOnly, SameSite=Lax, host-only cookie, issued by
-  `/auth/signup` and `/auth/login` (also returned in the body for curl and tests)
-- **machines** — a long-lived revocable API key, `Authorization: Bearer jrk_…`
-
-Auth is **opt-in per route**; a route that declares nothing costs nothing.
-
-```ts
-app.get('/thing', { config: { auth: true } }, handler)                     // either kind
-app.post('/keys', { config: { auth: { session: true, apiKey: false } } })  // humans only
-```
-
-Handlers read the caller with `const { userId } = requireAuth(req)`. Missing/invalid/expired/revoked
-credentials are **401**; a valid credential of a kind the route does not accept is **403**.
-
-`JWT_SECRET` is required with no default — the app refuses to boot without it.
-
-## Key endpoints
-
-| Path                  | Auth         | Description                             |
-| --------------------- | ------------ | --------------------------------------- |
-| `/api/v1/auth/signup` | public       | Create an account, start a session      |
-| `/api/v1/auth/login`  | public       | Exchange email + password for a session |
-| `/api/v1/auth/logout` | public       | Clear the session cookie                |
-| `/api/v1/auth/me`     | session/key  | The caller and how they authenticated   |
-| `/api/v1/keys`        | session only | List / create API keys                  |
-| `/api/v1/keys/{id}`   | session only | Revoke an API key                       |
-| `/api-docs`           | public       | Swagger UI                              |
-| `/api-docs/json`      | public       | OpenAPI JSON (client gen)               |
-| `/health`             | public       | Health check                            |
-
 ## The task API
 
 The engine's HTTP surface. Every task route accepts **either** credential kind — the dashboard
@@ -166,50 +131,6 @@ another go" from "this will never work".
 > keeps the last attempt's error on a task it has requeued for a retry, which is honest internally
 > but would make a client written to the contract render a queued task as failed. The interim
 > reason is not lost — it is on the `retry_scheduled` event in `GET /tasks/{handle}/history`.
-
-### Three deliberate divergences
-
-These are decisions, not oversights, and each is a trade the contract wins:
-
-1. **`GET /tasks` returns a bare array**, not this API's `{count, limit, page, data}` envelope that
-   `GET /keys` uses. The contract fixes the shape, and a reviewer's script doing
-   `res.json()[0].handle` must not break on a local convention. The inconsistency is intentional:
-   an endpoint whose shape is specified externally follows the specification, and one whose shape
-   is ours follows the house style.
-2. **`/tasks/{handle}/result` returns the whole task object** with `result` populated and
-   `collected: true`, rather than the bare result value. Collecting is a state transition, and the
-   caller almost always wants the new state (`collected`, `updated_at`) alongside the payload —
-   returning the task means one response instead of a fetch-then-refetch. Collecting anything that
-   is not `ready`, or collecting twice, is a `409`.
-3. **`GET /lanes` is public.** It exposes lane names and parameter descriptors only — no user data
-   of any kind — and a public one lets the submit form render before the user has logged in.
-
-### Events
-
-`GET /api/v1/events` is a server-sent event stream, framed by
-[`@fastify/sse`](https://github.com/fastify/sse). Four event types are the contract:
-
-```jsonc
-{ "type": "accepted",  "handle": "scrape-1", "lane": "scrape", "summary": "…" }
-{ "type": "ready",     "handle": "scrape-1", "lane": "scrape", "summary": "…" }
-{ "type": "failed",    "handle": "scrape-1", "lane": "scrape", "reason": "…", "retryable": true }
-{ "type": "cancelled", "handle": "scrape-1", "lane": "scrape" }
-```
-
-Each also carries an additive `id` (the `task_events` id, and the SSE frame's `id:`) and `task_id`.
-`user_id` is stripped: it is bus routing metadata and the client already knows who it is.
-`started`, `retry_scheduled`, `requeued_on_restart`, `lease_expired`, `collected` and
-`retry_requested` also stream, carrying a raw `detail`; clients may ignore them.
-
-**Reconnection is gap-free.** Every frame carries `id:`, so a browser's `EventSource` sends
-`Last-Event-ID` automatically on reconnect and receives exactly what it missed; a curl client uses
-`?since=<id>` for the same effect. The handler subscribes *before* it replays and buffers what
-arrives in between, so an event that fires during the handover is neither lost nor duplicated.
-
-```bash
-curl -N -H "Authorization: Bearer jrk_…" http://localhost:3000/api/v1/events
-curl -N -H "Authorization: Bearer jrk_…" 'http://localhost:3000/api/v1/events?since=41'
-```
 
 ### The engine
 

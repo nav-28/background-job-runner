@@ -49,20 +49,6 @@ pnpm generate:api:live       # backend must be running on :3000
 
 Config lives in `orval.config.ts`.
 
-### Using the hooks
-
-```tsx
-import { useFindUsers, useCreateUser } from '@/lib/api/endpoints/users/users';
-
-const { data, isLoading } = useFindUsers({ limit: 20, page: 0 });
-const users = data?.data ?? [];
-
-const createUser = useCreateUser();
-createUser.mutate({ data: { email, country, postalCode, street } });
-```
-
-See `src/app/users/page.tsx` for a full CRUD example.
-
 ## Scripts
 
 | Script                    | Description                                    |
@@ -79,4 +65,3 @@ See `src/app/users/page.tsx` for a full CRUD example.
 | Variable              | Purpose                                                                 |
 | --------------------- | ----------------------------------------------------------------------- |
 | `NEXT_PUBLIC_API_URL` | **Required.** Absolute backend origin. Inlined at build time.           |
-| `OPENAPI_URL`         | Spec URL used by `generate:api:live`.                                    |
