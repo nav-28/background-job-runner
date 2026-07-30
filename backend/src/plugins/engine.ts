@@ -4,8 +4,9 @@ import env from '#src/config/env.ts';
 import { createEngine } from '#src/engine/index.ts';
 import type { Engine, EngineOptions, WorkerDescriptor } from '#src/engine/types.ts';
 import { mockWorkers } from '#src/workers/mock-worker.ts';
+import { createScrapeWorker } from '#src/workers/web-scrape/index.ts';
 
-const workers: WorkerDescriptor[] = [...mockWorkers];
+const workers: WorkerDescriptor[] = [...mockWorkers, createScrapeWorker()];
 
 const AUTOSTART_BY_DEFAULT = !env.isTest;
 

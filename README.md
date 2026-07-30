@@ -128,8 +128,10 @@ reach the OpenAPI document.
 
 Built to be honest about what it is rather than to look finished:
 
-- **Workers are simulated.** `scrape` and `report` sleep and return a payload. The engine has no
-  opinion about what a worker does.
+- **Two simulated lanes, one real one.** `scrape` and `report` sleep and return a payload; they are
+  how the demo triggers a failure and a retry on command. `web-scrape` does real network I/O —
+  it fetches a page and extracts its title, description and links, behind an SSRF guard. The engine
+  has no opinion about what a worker does.
 - **Single process.** Concurrency is a worker pool inside one Node process. Scaling to several
   replicas would work — claims are already race-safe — but `ENGINE_BOOT_SWEEP` must be off first, or
   a booting process would requeue its peers' live work.
