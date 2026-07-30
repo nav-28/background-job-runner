@@ -1,20 +1,36 @@
 {
   "name": "Job Runner",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-24-bookworm",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:24-bookworm",
   "features": {
     // Postgres runs via docker compose, the same way it does outside the container.
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
-  "forwardPorts": [3001, 3000, 5432],
+  "forwardPorts": [
+    3001,
+    3000,
+    5432
+  ],
   "portsAttributes": {
-    "3001": { "label": "UI", "onAutoForward": "openBrowserOnce" },
-    "3000": { "label": "API", "onAutoForward": "notify" },
-    "5432": { "label": "Postgres", "onAutoForward": "silent" }
+    "3001": {
+      "label": "UI",
+      "onAutoForward": "openBrowserOnce"
+    },
+    "3000": {
+      "label": "API",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "Postgres",
+      "onAutoForward": "silent"
+    }
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "customizations": {
     "vscode": {
-      "extensions": ["biomejs.biome", "ms-azuretools.vscode-docker"],
+      "extensions": [
+        "biomejs.biome",
+        "ms-azuretools.vscode-docker"
+      ],
       "settings": {
         "editor.defaultFormatter": "biomejs.biome",
         "editor.formatOnSave": true

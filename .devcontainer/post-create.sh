@@ -4,7 +4,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-corepack enable
+# No `corepack enable`: the image already ships pnpm, and enabling corepack as the non-root user
+# fails trying to symlink into root-owned /usr/local/bin. pnpm reads `packageManager` in the root
+# package.json and switches itself to the pinned version.
 pnpm install --frozen-lockfile
 
 [ -f backend/.env ] || cp backend/.env.example backend/.env
@@ -31,13 +33,29 @@ else
   printf 'NEXT_PUBLIC_API_URL=http://localhost:3000\n' > frontend/.env.local
 fi
 
+# The docker-in-docker daemon starts alongside this script, so it may not be listening yet.
+printf 'Waiting for Docker'
+for _ in $(seq 1 60); do
+  if docker info >/dev/null 2>&1; then
+    echo ' ready'
+    break
+  fi
+  printf '.'
+  sleep 1
+done
+
 docker compose up -d postgres
 
 printf 'Waiting for Postgres'
-for _ in $(seq 1 30); do
+for attempt in $(seq 1 30); do
   if docker compose exec -T postgres pg_isready -U admin -d test >/dev/null 2>&1; then
-    echo " ready"
+    echo ' ready'
     break
+  fi
+  if [ "$attempt" -eq 30 ]; then
+    echo
+    echo 'Postgres did not become ready. Check `docker compose logs postgres`, then re-run this script.'
+    exit 1
   fi
   printf '.'
   sleep 1
