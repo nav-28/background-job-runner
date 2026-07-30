@@ -1,0 +1,87 @@
+# NOTE: Production deployment only
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-jobrunner}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-jobrunner}",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  migrate:
+    image: ghcr.io/amacneil/dbmate:2
+    command: --no-dump-schema up
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jobrunner}?sslmode=disable
+    volumes:
+      - ./backend/db:/db
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      HOST: 0.0.0.0
+      PORT: 3000
+      POSTGRES_URL: postgres:5432
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-jobrunner}
+      # The browser origin allowed to call this API. Anything else is refused.
+      CORS_ORIGIN: https://${UI_HOST:?set UI_HOST in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env — openssl rand -hex 32}
+      SESSION_TTL_SECONDS: 14400
+      # Both hosts share a registrable domain, so the session cookie stays SameSite=Lax.
+      SESSION_COOKIE_SAMESITE: lax
+      ENGINE_CONCURRENCY: 2
+      ENGINE_POLL_INTERVAL_MS: 200
+      ENGINE_LEASE_MS: 30000
+      ENGINE_HEARTBEAT_MS: 10000
+      ENGINE_MAX_ATTEMPTS: 3
+      ENGINE_BACKOFF_BASE_MS: 500
+      ENGINE_BACKOFF_MAX_MS: 30000
+      ENGINE_JOB_TIMEOUT_MS: 300000
+      ENGINE_BOOT_SWEEP: "true"
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        # Inlined into the client bundle at build time, so changing it needs a rebuild,
+        # not a restart. Must be the origin the browser uses.
+        NEXT_PUBLIC_API_URL: https://${API_HOST:?set API_HOST in .env}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    ports:
+      - "127.0.0.1:3001:3001"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
