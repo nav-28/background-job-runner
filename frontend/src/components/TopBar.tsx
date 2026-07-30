@@ -6,12 +6,34 @@ import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
+import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
-
-const navLinks = [{ href: '/', label: 'Home' }];
+import { useLogout, useMe } from '@/lib/api/endpoints/auth/auth';
 
 export default function TopBar() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  /**
+   * `enabled: false` on purpose since the bar renders on the public `/login`
+   */
+  const { data: me } = useMe({ query: { enabled: false } });
+
+  const logout = useLogout({
+    mutation: {
+      // Whether or not the POST succeeded, the local session is over. Clearing
+      // the cache is what actually signs the user out client-side: the cookie is
+      // HttpOnly and unreachable from JS, so the cached user is the only thing
+      // we can drop.
+      onSettled: () => {
+        queryClient.clear();
+        router.replace('/login');
+      },
+    },
+  });
+
   return (
     <AppBar
       position="sticky"
@@ -25,17 +47,33 @@ export default function TopBar() {
             component={Link}
             href="/"
             variant="h6"
-            sx={{ fontWeight: 700, color: 'inherit', textDecoration: 'none', mr: 2 }}
+            sx={{
+              fontWeight: 700,
+              color: 'inherit',
+              textDecoration: 'none',
+              mr: 2,
+            }}
           >
-            web-app-template
+            Background Job Runner
           </Typography>
-          <Box sx={{ display: 'flex', gap: 0.5, flexGrow: 1 }}>
-            {navLinks.map((link) => (
-              <Button key={link.href} component={Link} href={link.href} color="inherit">
-                {link.label}
+
+          <Box sx={{ flexGrow: 1 }} />
+
+          {me ? (
+            <>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ display: { xs: 'none', sm: 'block' } }}
+              >
+                {me.user.email}
+              </Typography>
+              <Button color="inherit" onClick={() => logout.mutate()} loading={logout.isPending}>
+                Sign out
               </Button>
-            ))}
-          </Box>
+            </>
+          ) : null}
+
           <ThemeToggle />
         </Toolbar>
       </Container>

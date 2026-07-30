@@ -21,7 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ErrorType } from '../../api-client';
 
 import { customInstance } from '../../api-client';
-import type { Health200 } from '../../model';
+import type { HealthResponse } from '../../model';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
@@ -29,7 +29,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
  * Health check
  */
 export const health = (options?: SecondParameter<typeof customInstance>, signal?: AbortSignal) => {
-  return customInstance<Health200>({ url: `/health`, method: 'GET', signal }, options);
+  return customInstance<HealthResponse>({ url: `/health`, method: 'GET', signal }, options);
 };
 
 export const getHealthQueryKey = () => {

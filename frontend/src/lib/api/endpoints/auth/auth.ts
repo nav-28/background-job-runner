@@ -26,11 +26,10 @@ import type { BodyType, ErrorType } from '../../api-client';
 import { customInstance } from '../../api-client';
 import type {
   ApiErrorResponse,
-  Login200,
-  LoginBody,
-  Me200,
-  Signup201,
-  SignupBody,
+  LoginRequest,
+  MeResponse,
+  SessionResponse,
+  SignupRequest,
 } from '../../model';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -39,16 +38,16 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
  * Create an account and start a session
  */
 export const signup = (
-  signupBody: BodyType<SignupBody>,
+  signupRequest: BodyType<SignupRequest>,
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<Signup201>(
+  return customInstance<SessionResponse>(
     {
       url: `/api/v1/auth/signup`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      data: signupBody,
+      data: signupRequest,
       signal,
     },
     options,
@@ -62,14 +61,14 @@ export const getSignupMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof signup>>,
     TError,
-    { data: BodyType<SignupBody> },
+    { data: BodyType<SignupRequest> },
     TContext
   >;
   request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof signup>>,
   TError,
-  { data: BodyType<SignupBody> },
+  { data: BodyType<SignupRequest> },
   TContext
 > => {
   const mutationKey = ['signup'];
@@ -81,7 +80,7 @@ export const getSignupMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof signup>>,
-    { data: BodyType<SignupBody> }
+    { data: BodyType<SignupRequest> }
   > = (props) => {
     const { data } = props ?? {};
 
@@ -92,7 +91,7 @@ export const getSignupMutationOptions = <
 };
 
 export type SignupMutationResult = NonNullable<Awaited<ReturnType<typeof signup>>>;
-export type SignupMutationBody = BodyType<SignupBody>;
+export type SignupMutationBody = BodyType<SignupRequest>;
 export type SignupMutationError = ErrorType<ApiErrorResponse>;
 
 export const useSignup = <TError = ErrorType<ApiErrorResponse>, TContext = unknown>(
@@ -100,7 +99,7 @@ export const useSignup = <TError = ErrorType<ApiErrorResponse>, TContext = unkno
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof signup>>,
       TError,
-      { data: BodyType<SignupBody> },
+      { data: BodyType<SignupRequest> },
       TContext
     >;
     request?: SecondParameter<typeof customInstance>;
@@ -109,7 +108,7 @@ export const useSignup = <TError = ErrorType<ApiErrorResponse>, TContext = unkno
 ): UseMutationResult<
   Awaited<ReturnType<typeof signup>>,
   TError,
-  { data: BodyType<SignupBody> },
+  { data: BodyType<SignupRequest> },
   TContext
 > => {
   const mutationOptions = getSignupMutationOptions(options);
@@ -120,16 +119,16 @@ export const useSignup = <TError = ErrorType<ApiErrorResponse>, TContext = unkno
  * Exchange email and password for a session
  */
 export const login = (
-  loginBody: BodyType<LoginBody>,
+  loginRequest: BodyType<LoginRequest>,
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<Login200>(
+  return customInstance<SessionResponse>(
     {
       url: `/api/v1/auth/login`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      data: loginBody,
+      data: loginRequest,
       signal,
     },
     options,
@@ -143,14 +142,14 @@ export const getLoginMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof login>>,
     TError,
-    { data: BodyType<LoginBody> },
+    { data: BodyType<LoginRequest> },
     TContext
   >;
   request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof login>>,
   TError,
-  { data: BodyType<LoginBody> },
+  { data: BodyType<LoginRequest> },
   TContext
 > => {
   const mutationKey = ['login'];
@@ -162,7 +161,7 @@ export const getLoginMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof login>>,
-    { data: BodyType<LoginBody> }
+    { data: BodyType<LoginRequest> }
   > = (props) => {
     const { data } = props ?? {};
 
@@ -173,7 +172,7 @@ export const getLoginMutationOptions = <
 };
 
 export type LoginMutationResult = NonNullable<Awaited<ReturnType<typeof login>>>;
-export type LoginMutationBody = BodyType<LoginBody>;
+export type LoginMutationBody = BodyType<LoginRequest>;
 export type LoginMutationError = ErrorType<ApiErrorResponse>;
 
 export const useLogin = <TError = ErrorType<ApiErrorResponse>, TContext = unknown>(
@@ -181,7 +180,7 @@ export const useLogin = <TError = ErrorType<ApiErrorResponse>, TContext = unknow
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof login>>,
       TError,
-      { data: BodyType<LoginBody> },
+      { data: BodyType<LoginRequest> },
       TContext
     >;
     request?: SecondParameter<typeof customInstance>;
@@ -190,7 +189,7 @@ export const useLogin = <TError = ErrorType<ApiErrorResponse>, TContext = unknow
 ): UseMutationResult<
   Awaited<ReturnType<typeof login>>,
   TError,
-  { data: BodyType<LoginBody> },
+  { data: BodyType<LoginRequest> },
   TContext
 > => {
   const mutationOptions = getLoginMutationOptions(options);
@@ -244,7 +243,7 @@ export const useLogout = <TError = ErrorType<unknown>, TContext = unknown>(
  * The authenticated user and the credential that identified them
  */
 export const me = (options?: SecondParameter<typeof customInstance>, signal?: AbortSignal) => {
-  return customInstance<Me200>({ url: `/api/v1/auth/me`, method: 'GET', signal }, options);
+  return customInstance<MeResponse>({ url: `/api/v1/auth/me`, method: 'GET', signal }, options);
 };
 
 export const getMeQueryKey = () => {

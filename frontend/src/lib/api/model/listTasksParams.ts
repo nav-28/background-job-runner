@@ -7,13 +7,13 @@
  */
 
 import type { ListTasksSort } from './listTasksSort';
-import type { ListTasksStatus } from './listTasksStatus';
+import type { TaskStatus } from './taskStatus';
 
 export type ListTasksParams = {
   /**
    * Where a task is in its lifecycle
    */
-  status?: (typeof ListTasksStatus)[keyof typeof ListTasksStatus];
+  status?: TaskStatus;
   /**
    * Filter by lane
    */

@@ -1,6 +1,9 @@
 import { MutationCache, QueryClient } from '@tanstack/react-query';
+import { enqueueSnackbar } from '@/components/GlobalSnackbar/store';
 import { apiErrorMessage, apiErrorStatus } from '@/lib/api/errors';
-import { useUiStore } from '@/lib/stores/ui-store';
+
+/** The snackbar default of 3s is not enough time to read a failure. */
+const ERROR_AUTO_HIDE_DURATION = 6000;
 
 declare module '@tanstack/react-query' {
   interface Register {
@@ -23,7 +26,10 @@ export function makeQueryClient(): QueryClient {
         if (typeof suppress === 'function' ? suppress(error) : suppress === true) {
           return;
         }
-        useUiStore.getState().notify(apiErrorMessage(error), 'error');
+        enqueueSnackbar(apiErrorMessage(error), {
+          variant: 'error',
+          autoHideDuration: ERROR_AUTO_HIDE_DURATION,
+        });
       },
     }),
     defaultOptions: {

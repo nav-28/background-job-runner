@@ -1,8 +1,8 @@
 import { MutationObserver } from '@tanstack/react-query';
 import { AxiosError, AxiosHeaders } from 'axios';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { useSnackbarStore } from '@/components/GlobalSnackbar/store';
 import { makeQueryClient } from '@/lib/query-client';
-import { useUiStore } from '@/lib/stores/ui-store';
 
 /**
  * The global mutation error contract.
@@ -24,8 +24,12 @@ function apiError(status: number, message: string): AxiosError {
   });
 }
 
-/** Runs a failing mutation to completion and returns the resulting snackbar. */
+const snackbars = () => useSnackbarStore.getState().snackbars;
+
+/** Runs a failing mutation to completion and returns the resulting snackbar queue. */
 async function failWith(error: AxiosError, meta?: Record<string, unknown>) {
+  useSnackbarStore.setState({ snackbars: [] });
+
   const client = makeQueryClient();
   const observer = new MutationObserver(client, {
     mutationFn: async () => {
@@ -34,18 +38,18 @@ async function failWith(error: AxiosError, meta?: Record<string, unknown>) {
     meta,
   });
   await observer.mutate().catch(() => {});
-  return useUiStore.getState().snackbar;
+  return snackbars();
 }
 
 describe('makeQueryClient mutation errors', () => {
   beforeEach(() => {
-    useUiStore.setState({ snackbar: { open: false, message: '', severity: 'info' } });
+    useSnackbarStore.setState({ snackbars: [] });
   });
 
   it('still toasts when the mutation defines its own onError, and toasts first', async () => {
     const client = makeQueryClient();
     let ownHandlerRan = false;
-    let snackbarWasOpenByThen = false;
+    let snackbarCountByThen = 0;
 
     const observer = new MutationObserver(client, {
       mutationFn: async () => {
@@ -54,7 +58,7 @@ describe('makeQueryClient mutation errors', () => {
       onError: () => {
         ownHandlerRan = true;
         // The cache handler has already run if the toast is up by now.
-        snackbarWasOpenByThen = useUiStore.getState().snackbar.open;
+        snackbarCountByThen = snackbars().length;
       },
     });
     await observer.mutate().catch(() => {});
@@ -62,34 +66,34 @@ describe('makeQueryClient mutation errors', () => {
     // Both fire, cache first. If this ever flips, the suppress flag below stops
     // being necessary — and every page that relied on it starts double-handling.
     expect(ownHandlerRan).toBe(true);
-    expect(snackbarWasOpenByThen).toBe(true);
-    expect(useUiStore.getState().snackbar.open).toBe(true);
+    expect(snackbarCountByThen).toBe(1);
+    expect(snackbars()).toHaveLength(1);
   });
 
   it('shows the backend message verbatim for a 4xx', async () => {
-    const snackbar = await failWith(apiError(409, 'Task is already collected'));
+    const queue = await failWith(apiError(409, 'Task is already collected'));
 
-    expect(snackbar.open).toBe(true);
-    expect(snackbar.message).toBe('Task is already collected');
-    expect(snackbar.severity).toBe('error');
+    expect(queue).toHaveLength(1);
+    expect(queue.at(-1)?.message).toBe('Task is already collected');
+    expect(queue.at(-1)?.variant).toBe('error');
   });
 
   it('stays silent when meta.suppressErrorToast is true', async () => {
-    const snackbar = await failWith(apiError(409, 'Task is already collected'), {
+    const queue = await failWith(apiError(409, 'Task is already collected'), {
       suppressErrorToast: true,
     });
 
-    expect(snackbar.open).toBe(false);
+    expect(queue).toHaveLength(0);
   });
 
   it('suppresses only what the predicate matches', async () => {
     const only409 = (error: unknown) => (error as AxiosError).response?.status === 409;
 
     expect(
-      (await failWith(apiError(409, 'Already collected'), { suppressErrorToast: only409 })).open,
-    ).toBe(false);
+      await failWith(apiError(409, 'Already collected'), { suppressErrorToast: only409 }),
+    ).toHaveLength(0);
     expect(
-      (await failWith(apiError(404, 'No such task'), { suppressErrorToast: only409 })).open,
-    ).toBe(true);
+      await failWith(apiError(404, 'No such task'), { suppressErrorToast: only409 }),
+    ).toHaveLength(1);
   });
 });

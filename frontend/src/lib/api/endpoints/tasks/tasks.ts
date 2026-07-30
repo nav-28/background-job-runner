@@ -26,19 +26,14 @@ import type { BodyType, ErrorType } from '../../api-client';
 import { customInstance } from '../../api-client';
 import type {
   ApiErrorResponse,
-  CancelTask200,
-  CollectTaskResult200,
-  CreateTask201,
-  CreateTaskBody,
-  GetTask200,
-  GetTaskById200,
-  GetTaskHistory200Item,
-  ListLanes200Item,
-  ListTasks200Item,
+  CreateTaskRequest,
+  LanesResponse,
   ListTasksParams,
-  RetryTask200,
   StreamEventsParams,
-  TaskStats200,
+  TaskHistoryResponse,
+  TaskListResponse,
+  TaskResponse,
+  TaskStatsResponse,
 } from '../../model';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -47,16 +42,16 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
  * Enqueue a job. Returns the task — with its handle — before any worker runs; the submit path never waits on the work itself.
  */
 export const createTask = (
-  createTaskBody: BodyType<CreateTaskBody>,
+  createTaskRequest: BodyType<CreateTaskRequest>,
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<CreateTask201>(
+  return customInstance<TaskResponse>(
     {
       url: `/api/v1/tasks`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      data: createTaskBody,
+      data: createTaskRequest,
       signal,
     },
     options,
@@ -70,14 +65,14 @@ export const getCreateTaskMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createTask>>,
     TError,
-    { data: BodyType<CreateTaskBody> },
+    { data: BodyType<CreateTaskRequest> },
     TContext
   >;
   request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createTask>>,
   TError,
-  { data: BodyType<CreateTaskBody> },
+  { data: BodyType<CreateTaskRequest> },
   TContext
 > => {
   const mutationKey = ['createTask'];
@@ -89,7 +84,7 @@ export const getCreateTaskMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createTask>>,
-    { data: BodyType<CreateTaskBody> }
+    { data: BodyType<CreateTaskRequest> }
   > = (props) => {
     const { data } = props ?? {};
 
@@ -100,7 +95,7 @@ export const getCreateTaskMutationOptions = <
 };
 
 export type CreateTaskMutationResult = NonNullable<Awaited<ReturnType<typeof createTask>>>;
-export type CreateTaskMutationBody = BodyType<CreateTaskBody>;
+export type CreateTaskMutationBody = BodyType<CreateTaskRequest>;
 export type CreateTaskMutationError = ErrorType<ApiErrorResponse>;
 
 export const useCreateTask = <TError = ErrorType<ApiErrorResponse>, TContext = unknown>(
@@ -108,7 +103,7 @@ export const useCreateTask = <TError = ErrorType<ApiErrorResponse>, TContext = u
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createTask>>,
       TError,
-      { data: BodyType<CreateTaskBody> },
+      { data: BodyType<CreateTaskRequest> },
       TContext
     >;
     request?: SecondParameter<typeof customInstance>;
@@ -117,7 +112,7 @@ export const useCreateTask = <TError = ErrorType<ApiErrorResponse>, TContext = u
 ): UseMutationResult<
   Awaited<ReturnType<typeof createTask>>,
   TError,
-  { data: BodyType<CreateTaskBody> },
+  { data: BodyType<CreateTaskRequest> },
   TContext
 > => {
   const mutationOptions = getCreateTaskMutationOptions(options);
@@ -132,7 +127,7 @@ export const listTasks = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<ListTasks200Item[]>(
+  return customInstance<TaskListResponse>(
     { url: `/api/v1/tasks`, method: 'GET', params, signal },
     options,
   );
@@ -248,7 +243,7 @@ export const taskStats = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<TaskStats200>(
+  return customInstance<TaskStatsResponse>(
     { url: `/api/v1/tasks/stats`, method: 'GET', signal },
     options,
   );
@@ -358,7 +353,7 @@ export const getTaskById = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<GetTaskById200>(
+  return customInstance<TaskResponse>(
     { url: `/api/v1/tasks/id/${id}`, method: 'GET', signal },
     options,
   );
@@ -475,7 +470,7 @@ export const getTask = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<GetTask200>(
+  return customInstance<TaskResponse>(
     { url: `/api/v1/tasks/${handle}`, method: 'GET', signal },
     options,
   );
@@ -592,7 +587,7 @@ export const collectTaskResult = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<CollectTaskResult200>(
+  return customInstance<TaskResponse>(
     { url: `/api/v1/tasks/${handle}/result`, method: 'GET', signal },
     options,
   );
@@ -711,7 +706,7 @@ export const getTaskHistory = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<GetTaskHistory200Item[]>(
+  return customInstance<TaskHistoryResponse>(
     { url: `/api/v1/tasks/${handle}/history`, method: 'GET', signal },
     options,
   );
@@ -828,7 +823,7 @@ export const cancelTask = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<CancelTask200>(
+  return customInstance<TaskResponse>(
     { url: `/api/v1/tasks/${handle}/cancel`, method: 'POST', signal },
     options,
   );
@@ -902,7 +897,7 @@ export const retryTask = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<RetryTask200>(
+  return customInstance<TaskResponse>(
     { url: `/api/v1/tasks/${handle}/retry`, method: 'POST', signal },
     options,
   );
@@ -975,10 +970,7 @@ export const listLanes = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<ListLanes200Item[]>(
-    { url: `/api/v1/lanes`, method: 'GET', signal },
-    options,
-  );
+  return customInstance<LanesResponse>({ url: `/api/v1/lanes`, method: 'GET', signal }, options);
 };
 
 export const getListLanesQueryKey = () => {

@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import Alert from "@mui/material/Alert";
-import AlertTitle from "@mui/material/AlertTitle";
-import Button from "@mui/material/Button";
-import { apiErrorMessage } from "@/lib/api/errors";
+import Alert from '@mui/material/Alert';
+import AlertTitle from '@mui/material/AlertTitle';
+import Button from '@mui/material/Button';
+import { apiErrorMessage } from '@/lib/api/errors';
 
 interface ErrorStateProps {
   /** Whatever a query/mutation failed with — usually `query.error`. */

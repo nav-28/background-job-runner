@@ -1,12 +1,13 @@
 import axios, { type AxiosError, type AxiosRequestConfig } from 'axios';
+import { API_BASE_URL } from '@/lib/api/config';
 
 /**
  * Axios instance + mutator used by the Orval-generated client (see orval.config.ts).
  *
  * The browser calls the backend **directly** — there is no Next.js rewrite proxy
- * any more. `baseURL` therefore comes from NEXT_PUBLIC_API_URL (http://localhost:3000
- * in dev, the API subdomain in production) and is inlined at build time. The
- * backend must allow this frontend's origin via CORS_ORIGIN.
+ * any more. `baseURL` therefore comes from `API_BASE_URL` (see config.ts), which
+ * reads NEXT_PUBLIC_API_URL and is inlined at build time. The backend must allow
+ * this frontend's origin via CORS_ORIGIN.
  *
  * The mutator returns `response.data` so generated hooks resolve to the response
  * body directly (e.g. `useListTasks().data` is the task array).
@@ -14,11 +15,12 @@ import axios, { type AxiosError, type AxiosRequestConfig } from 'axios';
  * ⚠ DO NOT USE the generated `useStreamEvents` / `streamEvents` for
  * `GET /api/v1/events`. That endpoint is a Server-Sent Events stream: this
  * mutator buffers the whole response and the stream never ends, so the call
- * hangs forever and the query never settles. A later phase hand-rolls an
- * `EventSource` hook for it instead. Nothing should import those two symbols.
+ * hangs forever and the query never settles. `src/lib/hooks/useTaskEvents.ts`
+ * hand-rolls a native `EventSource` hook for it instead. Nothing should import
+ * those two symbols.
  */
 export const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? '',
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   // The session is an HttpOnly cookie set by the backend, which is now a
   // different origin. Without this the browser sends no cookies cross-origin and

@@ -1,0 +1,174 @@
+'use client';
+
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import { enqueueSnackbar } from '@/components/GlobalSnackbar/store';
+import type { SnackbarMessage, SnackbarOptions } from '@/components/GlobalSnackbar/types';
+import { apiUrl } from '@/lib/api/config';
+
+export interface TaskEvent {
+  id: number;
+  task_id: string;
+  handle: string;
+  lane: string;
+  type: TaskEventType;
+}
+
+const CONTRACT_EVENT_TYPES = ['accepted', 'ready', 'failed', 'cancelled'] as const;
+
+const INFORMATIONAL_EVENT_TYPES = [
+  'started',
+  'retry_scheduled',
+  'requeued_on_restart',
+  'lease_expired',
+  'collected',
+  'retry_requested',
+] as const;
+
+const ALL_EVENT_TYPES = [...CONTRACT_EVENT_TYPES, ...INFORMATIONAL_EVENT_TYPES] as const;
+
+export type TaskEventType = (typeof ALL_EVENT_TYPES)[number];
+
+const COMPLETION_VARIANTS: Partial<Record<TaskEventType, 'success' | 'error' | 'info'>> = {
+  ready: 'success',
+  failed: 'error',
+  cancelled: 'info',
+};
+
+interface CompletionToast {
+  message: SnackbarMessage;
+  options: SnackbarOptions;
+}
+
+/**
+ * The only place a completion toast is built. Phase 3 adds a "View" `action`
+ * linking to /dashboard/{handle} here and nowhere else.
+ */
+function completionToast(event: TaskEvent): CompletionToast | null {
+  const variant = COMPLETION_VARIANTS[event.type];
+  if (!variant) return null;
+
+  return { message: `Task ${event.handle} ${event.type}`, options: { variant } };
+}
+
+/**
+ * Submitting 20 tasks produces roughly 60 events within a few seconds. One
+ * refetch per event is a request storm, so invalidations are coalesced into a
+ * single trailing call.
+ */
+const INVALIDATE_DEBOUNCE_MS = 250;
+
+/**
+ * A first connect carries no `Last-Event-ID`, and the backend reads a missing
+ * cursor as 0 — "replay everything you still have". That means every historic
+ * `ready`/`failed`/`cancelled` frame arrives on page load and toasts, so a fresh
+ * dashboard opens with a stack of notifications about week-old seed rows. Asking
+ * to start past the end suppresses only the replay; `Last-Event-ID` still wins on
+ * reconnect, so nothing missed during a blip is lost.
+ */
+const SKIP_REPLAY_CURSOR = Number.MAX_SAFE_INTEGER;
+
+export type TaskStreamStatus = 'connecting' | 'open' | 'error';
+
+export interface UseTaskEventsOptions {
+  enabled?: boolean;
+}
+
+export interface UseTaskEventsResult {
+  status: TaskStreamStatus;
+}
+
+function parseTaskEvent(raw: unknown): TaskEvent | null {
+  if (typeof raw !== 'string') return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    return parsed as TaskEvent;
+  } catch {
+    return null;
+  }
+}
+
+export function useTaskEvents({ enabled = true }: UseTaskEventsOptions = {}): UseTaskEventsResult {
+  const queryClient = useQueryClient();
+  const [status, setStatus] = useState<TaskStreamStatus>('connecting');
+
+  const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setStatus('connecting');
+      return;
+    }
+    if (typeof EventSource === 'undefined') return;
+
+    // Invalidate all tasks queries to refresh the data
+    const invalidateTaskQueries = () => {
+      void queryClient.invalidateQueries({
+        predicate: (query) => {
+          const root = query.queryKey[0];
+          return typeof root === 'string' && root.startsWith('/api/v1/tasks');
+        },
+      });
+    };
+
+    const scheduleInvalidate = () => {
+      if (flushTimer.current !== null) clearTimeout(flushTimer.current);
+      flushTimer.current = setTimeout(() => {
+        flushTimer.current = null;
+        invalidateTaskQueries();
+      }, INVALIDATE_DEBOUNCE_MS);
+    };
+
+    const source = new EventSource(apiUrl(`/api/v1/events?since=${SKIP_REPLAY_CURSOR}`), {
+      withCredentials: true,
+    });
+
+    const onOpen = () => {
+      setStatus('open');
+
+      // Invalidate queries with a debounce to get the latest state.
+      // The server might send data so the debounce helps with that
+      scheduleInvalidate();
+    };
+
+    const onError = () => {
+      // Browser will reconnect on its own
+      setStatus('error');
+    };
+
+    const onTaskEvent = (event: MessageEvent<unknown>) => {
+      const parsed = parseTaskEvent(event.data);
+      if (!parsed) return;
+
+      const toast = completionToast(parsed);
+      if (toast) enqueueSnackbar(toast.message, toast.options);
+
+      scheduleInvalidate();
+    };
+
+    source.addEventListener('open', onOpen);
+    source.addEventListener('error', onError);
+    // The backend sends `event: <type>` on every frame. EventSource dispatches by
+    // that field, so a plain `onmessage` handler would receive NONE of these
+    for (const type of ALL_EVENT_TYPES) {
+      source.addEventListener(type, onTaskEvent);
+    }
+
+    return () => {
+      source.removeEventListener('open', onOpen);
+      source.removeEventListener('error', onError);
+      for (const type of ALL_EVENT_TYPES) {
+        source.removeEventListener(type, onTaskEvent);
+      }
+      source.close();
+
+      if (flushTimer.current !== null) {
+        clearTimeout(flushTimer.current);
+        flushTimer.current = null;
+      }
+    };
+  }, [enabled, queryClient]);
+
+  return { status };
+}

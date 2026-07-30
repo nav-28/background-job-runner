@@ -26,9 +26,9 @@ import type { BodyType, ErrorType } from '../../api-client';
 import { customInstance } from '../../api-client';
 import type {
   ApiErrorResponse,
-  CreateApiKey201,
-  CreateApiKeyBody,
-  ListApiKeys200,
+  ApiKeyPaginatedResponse,
+  CreateApiKeyRequest,
+  CreatedApiKeyResponse,
   ListApiKeysParams,
 } from '../../model';
 
@@ -42,7 +42,7 @@ export const listApiKeys = (
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<ListApiKeys200>(
+  return customInstance<ApiKeyPaginatedResponse>(
     { url: `/api/v1/keys`, method: 'GET', params, signal },
     options,
   );
@@ -155,16 +155,16 @@ export function useListApiKeys<
  * Create an API key. The secret is returned once and never again.
  */
 export const createApiKey = (
-  createApiKeyBody: BodyType<CreateApiKeyBody>,
+  createApiKeyRequest: BodyType<CreateApiKeyRequest>,
   options?: SecondParameter<typeof customInstance>,
   signal?: AbortSignal,
 ) => {
-  return customInstance<CreateApiKey201>(
+  return customInstance<CreatedApiKeyResponse>(
     {
       url: `/api/v1/keys`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      data: createApiKeyBody,
+      data: createApiKeyRequest,
       signal,
     },
     options,
@@ -178,14 +178,14 @@ export const getCreateApiKeyMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createApiKey>>,
     TError,
-    { data: BodyType<CreateApiKeyBody> },
+    { data: BodyType<CreateApiKeyRequest> },
     TContext
   >;
   request?: SecondParameter<typeof customInstance>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createApiKey>>,
   TError,
-  { data: BodyType<CreateApiKeyBody> },
+  { data: BodyType<CreateApiKeyRequest> },
   TContext
 > => {
   const mutationKey = ['createApiKey'];
@@ -197,7 +197,7 @@ export const getCreateApiKeyMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createApiKey>>,
-    { data: BodyType<CreateApiKeyBody> }
+    { data: BodyType<CreateApiKeyRequest> }
   > = (props) => {
     const { data } = props ?? {};
 
@@ -208,7 +208,7 @@ export const getCreateApiKeyMutationOptions = <
 };
 
 export type CreateApiKeyMutationResult = NonNullable<Awaited<ReturnType<typeof createApiKey>>>;
-export type CreateApiKeyMutationBody = BodyType<CreateApiKeyBody>;
+export type CreateApiKeyMutationBody = BodyType<CreateApiKeyRequest>;
 export type CreateApiKeyMutationError = ErrorType<ApiErrorResponse>;
 
 export const useCreateApiKey = <TError = ErrorType<ApiErrorResponse>, TContext = unknown>(
@@ -216,7 +216,7 @@ export const useCreateApiKey = <TError = ErrorType<ApiErrorResponse>, TContext =
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createApiKey>>,
       TError,
-      { data: BodyType<CreateApiKeyBody> },
+      { data: BodyType<CreateApiKeyRequest> },
       TContext
     >;
     request?: SecondParameter<typeof customInstance>;
@@ -225,7 +225,7 @@ export const useCreateApiKey = <TError = ErrorType<ApiErrorResponse>, TContext =
 ): UseMutationResult<
   Awaited<ReturnType<typeof createApiKey>>,
   TError,
-  { data: BodyType<CreateApiKeyBody> },
+  { data: BodyType<CreateApiKeyRequest> },
   TContext
 > => {
   const mutationOptions = getCreateApiKeyMutationOptions(options);

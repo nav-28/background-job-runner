@@ -1,1 +1,1776 @@
-{"openapi":"3.1.0","info":{"title":"web-app-template API","description":"REST API for web-app-template.","version":"0.1.0"},"components":{"schemas":{"ApiErrorResponse":{"type":"object","required":["statusCode","message","error","correlationId"],"properties":{"statusCode":{"type":"number","example":400},"message":{"type":"string","example":"Validation Error"},"error":{"type":"string","example":"Bad Request"},"correlationId":{"type":"string","example":"YevPQs"},"subErrors":{"type":"string","description":"Optional list of sub-errors","example":"incorrect email"}}}}},"paths":{"/health":{"get":{"operationId":"health","tags":["health"],"description":"Health check","responses":{"200":{"description":"Health Check Succeeded","content":{"application/json":{"schema":{"type":"object","required":["status"],"properties":{"status":{"type":"string","example":"ok"}},"title":"HealthResponse","description":"Health Check Succeeded"}}}}}}},"/api/v1/auth/signup":{"post":{"operationId":"signup","tags":["auth"],"description":"Create an account and start a session","requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["email","name","password"],"properties":{"email":{"type":"string","example":"john@gmail.com","description":"Email address, used as the login identifier","format":"email","minLength":5,"maxLength":320},"name":{"type":"string","example":"John Doe","description":"Display name","minLength":1,"maxLength":100},"password":{"type":"string","example":"correct horse battery staple","description":"Plaintext password. Sent once, stored only as a scrypt hash.","minLength":8,"maxLength":256}},"title":"SignupRequest"}}}},"responses":{"201":{"description":"Default Response","content":{"application/json":{"schema":{"type":"object","required":["user","token","expiresIn"],"properties":{"user":{"type":"object","required":["id","createdAt","updatedAt","email","name"],"properties":{"id":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231","description":"Entity's id"},"createdAt":{"type":"string","example":"2020-11-24T17:43:15.970Z","description":"Entity creation date"},"updatedAt":{"type":"string","example":"2020-11-24T17:43:15.970Z","description":"Entity last update date"},"email":{"type":"string","example":"test@mail.com","format":"email","description":"User's email address"},"name":{"type":"string","example":"John Doe","description":"User's display name"}},"title":"UserResponse"},"token":{"type":"string","example":"<header>.<payload>.<signature>","description":"Session JWT. Also set as an HttpOnly cookie on this response."},"expiresIn":{"type":"number","example":14400,"description":"Token lifetime in seconds"}},"title":"SessionResponse"}}}},"409":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/auth/login":{"post":{"operationId":"login","tags":["auth"],"description":"Exchange email and password for a session","requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["email","password"],"properties":{"email":{"type":"string","example":"john@gmail.com","description":"Email address, used as the login identifier","format":"email","minLength":5,"maxLength":320},"password":{"type":"string","example":"correct horse battery staple","description":"Plaintext password. Sent once, stored only as a scrypt hash.","minLength":8,"maxLength":256}},"title":"LoginRequest"}}}},"responses":{"200":{"description":"Default Response","content":{"application/json":{"schema":{"type":"object","required":["user","token","expiresIn"],"properties":{"user":{"type":"object","required":["id","createdAt","updatedAt","email","name"],"properties":{"id":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231","description":"Entity's id"},"createdAt":{"type":"string","example":"2020-11-24T17:43:15.970Z","description":"Entity creation date"},"updatedAt":{"type":"string","example":"2020-11-24T17:43:15.970Z","description":"Entity last update date"},"email":{"type":"string","example":"test@mail.com","format":"email","description":"User's email address"},"name":{"type":"string","example":"John Doe","description":"User's display name"}},"title":"UserResponse"},"token":{"type":"string","example":"<header>.<payload>.<signature>","description":"Session JWT. Also set as an HttpOnly cookie on this response."},"expiresIn":{"type":"number","example":14400,"description":"Token lifetime in seconds"}},"title":"SessionResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/auth/logout":{"post":{"operationId":"logout","tags":["auth"],"description":"Clear the session cookie","responses":{"204":{"description":"Session Cleared"}}}},"/api/v1/auth/me":{"get":{"operationId":"me","tags":["auth"],"description":"The authenticated user and the credential that identified them","responses":{"200":{"description":"Default Response","content":{"application/json":{"schema":{"type":"object","required":["user","kind"],"properties":{"user":{"type":"object","required":["id","createdAt","updatedAt","email","name"],"properties":{"id":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231","description":"Entity's id"},"createdAt":{"type":"string","example":"2020-11-24T17:43:15.970Z","description":"Entity creation date"},"updatedAt":{"type":"string","example":"2020-11-24T17:43:15.970Z","description":"Entity last update date"},"email":{"type":"string","example":"test@mail.com","format":"email","description":"User's email address"},"name":{"type":"string","example":"John Doe","description":"User's display name"}},"title":"UserResponse"},"kind":{"anyOf":[{"type":"string","enum":["session"]},{"type":"string","enum":["key"]}],"example":"session","description":"Which credential authenticated this request"}},"title":"MeResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/keys":{"get":{"operationId":"listApiKeys","tags":["keys"],"description":"List your active API keys. Never returns the secret.","parameters":[{"schema":{"type":"number","example":10,"minimum":1,"maximum":99999},"in":"query","name":"limit","required":false,"description":"Specifies a limit of returned records"},{"schema":{"type":"number","example":0,"minimum":0,"maximum":99999},"in":"query","name":"page","required":false,"description":"Page number"}],"responses":{"200":{"description":"Default Response","content":{"application/json":{"schema":{"type":"object","required":["count","limit","page","data"],"properties":{"count":{"type":"number","example":5,"description":"Total number of items"},"limit":{"type":"number","example":10,"description":"Number of items per page"},"page":{"type":"number","example":0,"description":"Page number"},"data":{"type":"array","items":{"type":"object","required":["id","name","prefix","lastUsedAt","createdAt"],"properties":{"id":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231","description":"Entity's id"},"name":{"type":"string","example":"ci-pipeline","description":"Label for this key"},"prefix":{"type":"string","example":"jrk_A1b2C3d4","description":"The leading characters of the key, so it can be identified in a list"},"lastUsedAt":{"anyOf":[{"type":"string"},{"type":"null"}],"example":"2020-11-24T17:43:15.970Z","description":"When the key last authenticated a request; null if never used"},"createdAt":{"type":"string","example":"2020-11-24T17:43:15.970Z","description":"Entity creation date"}},"title":"ApiKeyResponse"}}},"title":"ApiKeyPaginatedResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"403":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}},"post":{"operationId":"createApiKey","tags":["keys"],"description":"Create an API key. The secret is returned once and never again.","requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["name"],"properties":{"name":{"type":"string","example":"ci-pipeline","description":"Label so a human can tell their keys apart","minLength":1,"maxLength":100}},"title":"CreateApiKeyRequest"}}}},"responses":{"201":{"description":"Default Response","content":{"application/json":{"schema":{"type":"object","required":["id","name","prefix","lastUsedAt","createdAt","key"],"properties":{"id":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231","description":"Entity's id"},"name":{"type":"string","example":"ci-pipeline","description":"Label for this key"},"prefix":{"type":"string","example":"jrk_A1b2C3d4","description":"The leading characters of the key, so it can be identified in a list"},"lastUsedAt":{"anyOf":[{"type":"string"},{"type":"null"}],"example":"2020-11-24T17:43:15.970Z","description":"When the key last authenticated a request; null if never used"},"createdAt":{"type":"string","example":"2020-11-24T17:43:15.970Z","description":"Entity creation date"},"key":{"type":"string","example":"jrk_<32-random-bytes-base64url>","description":"The secret. Shown exactly once — it cannot be retrieved again."}},"title":"CreatedApiKeyResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"403":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/keys/{id}":{"delete":{"operationId":"revokeApiKey","tags":["keys"],"description":"Revoke an API key. The row is kept so its history stays auditable.","parameters":[{"schema":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231"},"in":"path","name":"id","required":true,"description":"Entity's id"}],"responses":{"204":{"description":"API Key Revoked"},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"403":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"404":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/tasks":{"post":{"operationId":"createTask","tags":["tasks"],"description":"Enqueue a job. Returns the task — with its handle — before any worker runs; the submit path never waits on the work itself.","requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["lane"],"properties":{"lane":{"type":"string","example":"scrape","description":"A lane from GET /lanes. An unknown one is a 400.","minLength":1},"params":{"type":"object","additionalProperties":true,"description":"Parameters for the lane’s worker. Declared params are validated against their descriptors; undeclared keys ride along untouched."}},"title":"CreateTaskRequest"}}}},"responses":{"201":{"description":"Default Response","content":{"application/json":{"schema":{"type":"object","required":["id","handle","lane","params","status","result","error","attempts","collected","is_seed","created_at","updated_at"],"properties":{"id":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231","description":"Stable identity. Handles are recycled, so `scrape-1` may name three different tasks over an afternoon; this never changes and addresses retired tasks too."},"handle":{"type":"string","example":"scrape-1","description":"Short human-friendly name, `<lane>-<n>`, numbered per lane and recycled"},"lane":{"type":"string","example":"scrape","description":"Which worker runs this task"},"params":{"type":"object","additionalProperties":true,"description":"Whatever the submitter sent, normalised against the lane’s descriptors"},"status":{"anyOf":[{"type":"string","enum":["queued"]},{"type":"string","enum":["running"]},{"type":"string","enum":["ready"]},{"type":"string","enum":["failed"]},{"type":"string","enum":["cancelled"]}],"title":"TaskStatus","description":"Where a task is in its lifecycle"},"result":{"description":"The worker’s output. Populated only while `status` is `ready`, else null."},"error":{"anyOf":[{"type":"object","required":["reason","retryable"],"properties":{"reason":{"type":"string","example":"simulated failure","description":"Why it failed, in the worker’s own words — never a generic \"failed\""},"retryable":{"type":"boolean","example":true,"description":"Whether the error is transient by nature. Stays true on a transient error that ran out of attempts, because \"we stopped trying\" is not \"this can never work\"."}},"title":"TaskError","additionalProperties":true},{"type":"null"}],"description":"Populated only while `status` is `failed`, else null."},"attempts":{"type":"integer","example":1,"description":"Lifetime execution count — one per claim, never reset. A manual retry extends the budget instead, so this stays honest about how much work a task has cost."},"collected":{"type":"boolean","example":false,"description":"Flips to true once the result is retrieved, which releases the handle number"},"is_seed":{"type":"boolean","example":false,"description":"Fixture data for the dashboard. Seed rows are excluded from the claim query and from both recovery sweeps, so a seeded `running` task never executes."},"created_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"When the task was accepted"},"updated_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"Last state change"}},"title":"TaskResponse"}}}},"400":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"404":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"409":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}},"get":{"operationId":"listTasks","tags":["tasks"],"description":"Your tasks, newest first. Filter by status, lane and creation date; sort and page. Returns a bare array rather than the paginated envelope the rest of this API uses — the shape is fixed by the API contract.","parameters":[{"schema":{"anyOf":[{"type":"string","enum":["queued"]},{"type":"string","enum":["running"]},{"type":"string","enum":["ready"]},{"type":"string","enum":["failed"]},{"type":"string","enum":["cancelled"]}],"title":"TaskStatus"},"in":"query","name":"status","required":false,"description":"Where a task is in its lifecycle"},{"schema":{"type":"string","example":"scrape"},"in":"query","name":"lane","required":false,"description":"Filter by lane"},{"schema":{"type":"string","format":"date-time","example":"2026-05-30T18:00:00.000Z"},"in":"query","name":"from","required":false,"description":"Only tasks created at or after this instant (ISO 8601)"},{"schema":{"type":"string","format":"date-time","example":"2026-05-30T18:00:00.000Z"},"in":"query","name":"to","required":false,"description":"Only tasks created at or before this instant (ISO 8601)"},{"schema":{"anyOf":[{"type":"string","enum":["asc"]},{"type":"string","enum":["desc"]}]},"in":"query","name":"sort","required":false,"description":"By creation time. Defaults to `desc` — newest first."},{"schema":{"type":"integer","minimum":1,"maximum":100,"example":20},"in":"query","name":"limit","required":false},{"schema":{"type":"integer","minimum":0,"example":0},"in":"query","name":"offset","required":false}],"responses":{"200":{"description":"Default Response","content":{"application/json":{"schema":{"type":"array","items":{"type":"object","required":["id","handle","lane","params","status","result","error","attempts","collected","is_seed","created_at","updated_at"],"properties":{"id":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231","description":"Stable identity. Handles are recycled, so `scrape-1` may name three different tasks over an afternoon; this never changes and addresses retired tasks too."},"handle":{"type":"string","example":"scrape-1","description":"Short human-friendly name, `<lane>-<n>`, numbered per lane and recycled"},"lane":{"type":"string","example":"scrape","description":"Which worker runs this task"},"params":{"type":"object","additionalProperties":true,"description":"Whatever the submitter sent, normalised against the lane’s descriptors"},"status":{"anyOf":[{"type":"string","enum":["queued"]},{"type":"string","enum":["running"]},{"type":"string","enum":["ready"]},{"type":"string","enum":["failed"]},{"type":"string","enum":["cancelled"]}],"title":"TaskStatus","description":"Where a task is in its lifecycle"},"result":{"description":"The worker’s output. Populated only while `status` is `ready`, else null."},"error":{"anyOf":[{"type":"object","required":["reason","retryable"],"properties":{"reason":{"type":"string","example":"simulated failure","description":"Why it failed, in the worker’s own words — never a generic \"failed\""},"retryable":{"type":"boolean","example":true,"description":"Whether the error is transient by nature. Stays true on a transient error that ran out of attempts, because \"we stopped trying\" is not \"this can never work\"."}},"title":"TaskError","additionalProperties":true},{"type":"null"}],"description":"Populated only while `status` is `failed`, else null."},"attempts":{"type":"integer","example":1,"description":"Lifetime execution count — one per claim, never reset. A manual retry extends the budget instead, so this stays honest about how much work a task has cost."},"collected":{"type":"boolean","example":false,"description":"Flips to true once the result is retrieved, which releases the handle number"},"is_seed":{"type":"boolean","example":false,"description":"Fixture data for the dashboard. Seed rows are excluded from the claim query and from both recovery sweeps, so a seeded `running` task never executes."},"created_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"When the task was accepted"},"updated_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"Last state change"}},"title":"TaskResponse"},"title":"TaskListResponse"}}}},"400":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"404":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"409":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/tasks/stats":{"get":{"operationId":"taskStats","tags":["tasks"],"description":"Your task counts per status. Every status is present, zeroed when empty.","responses":{"200":{"description":"Default Response","content":{"application/json":{"schema":{"type":"object","required":["queued","running","ready","failed","cancelled"],"properties":{"queued":{"type":"integer","example":3},"running":{"type":"integer","example":2},"ready":{"type":"integer","example":11},"failed":{"type":"integer","example":1},"cancelled":{"type":"integer","example":0}},"title":"TaskStatsResponse"}}}},"400":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"404":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"409":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/tasks/id/{id}":{"get":{"operationId":"getTaskById","tags":["tasks"],"description":"One task by its immutable id. Handles are recycled, so this is the only address that keeps pointing at the same task once it retires.","parameters":[{"schema":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231"},"in":"path","name":"id","required":true,"description":"Task's id"}],"responses":{"200":{"description":"Default Response","content":{"application/json":{"schema":{"type":"object","required":["id","handle","lane","params","status","result","error","attempts","collected","is_seed","created_at","updated_at"],"properties":{"id":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231","description":"Stable identity. Handles are recycled, so `scrape-1` may name three different tasks over an afternoon; this never changes and addresses retired tasks too."},"handle":{"type":"string","example":"scrape-1","description":"Short human-friendly name, `<lane>-<n>`, numbered per lane and recycled"},"lane":{"type":"string","example":"scrape","description":"Which worker runs this task"},"params":{"type":"object","additionalProperties":true,"description":"Whatever the submitter sent, normalised against the lane’s descriptors"},"status":{"anyOf":[{"type":"string","enum":["queued"]},{"type":"string","enum":["running"]},{"type":"string","enum":["ready"]},{"type":"string","enum":["failed"]},{"type":"string","enum":["cancelled"]}],"title":"TaskStatus","description":"Where a task is in its lifecycle"},"result":{"description":"The worker’s output. Populated only while `status` is `ready`, else null."},"error":{"anyOf":[{"type":"object","required":["reason","retryable"],"properties":{"reason":{"type":"string","example":"simulated failure","description":"Why it failed, in the worker’s own words — never a generic \"failed\""},"retryable":{"type":"boolean","example":true,"description":"Whether the error is transient by nature. Stays true on a transient error that ran out of attempts, because \"we stopped trying\" is not \"this can never work\"."}},"title":"TaskError","additionalProperties":true},{"type":"null"}],"description":"Populated only while `status` is `failed`, else null."},"attempts":{"type":"integer","example":1,"description":"Lifetime execution count — one per claim, never reset. A manual retry extends the budget instead, so this stays honest about how much work a task has cost."},"collected":{"type":"boolean","example":false,"description":"Flips to true once the result is retrieved, which releases the handle number"},"is_seed":{"type":"boolean","example":false,"description":"Fixture data for the dashboard. Seed rows are excluded from the claim query and from both recovery sweeps, so a seeded `running` task never executes."},"created_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"When the task was accepted"},"updated_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"Last state change"}},"title":"TaskResponse"}}}},"400":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"404":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"409":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/tasks/{handle}":{"get":{"operationId":"getTask","tags":["tasks"],"description":"One task by handle. Resolves to the active task holding that number.","parameters":[{"schema":{"type":"string","example":"scrape-1"},"in":"path","name":"handle","required":true,"description":"The task handle, `<lane>-<n>`"}],"responses":{"200":{"description":"Default Response","content":{"application/json":{"schema":{"type":"object","required":["id","handle","lane","params","status","result","error","attempts","collected","is_seed","created_at","updated_at"],"properties":{"id":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231","description":"Stable identity. Handles are recycled, so `scrape-1` may name three different tasks over an afternoon; this never changes and addresses retired tasks too."},"handle":{"type":"string","example":"scrape-1","description":"Short human-friendly name, `<lane>-<n>`, numbered per lane and recycled"},"lane":{"type":"string","example":"scrape","description":"Which worker runs this task"},"params":{"type":"object","additionalProperties":true,"description":"Whatever the submitter sent, normalised against the lane’s descriptors"},"status":{"anyOf":[{"type":"string","enum":["queued"]},{"type":"string","enum":["running"]},{"type":"string","enum":["ready"]},{"type":"string","enum":["failed"]},{"type":"string","enum":["cancelled"]}],"title":"TaskStatus","description":"Where a task is in its lifecycle"},"result":{"description":"The worker’s output. Populated only while `status` is `ready`, else null."},"error":{"anyOf":[{"type":"object","required":["reason","retryable"],"properties":{"reason":{"type":"string","example":"simulated failure","description":"Why it failed, in the worker’s own words — never a generic \"failed\""},"retryable":{"type":"boolean","example":true,"description":"Whether the error is transient by nature. Stays true on a transient error that ran out of attempts, because \"we stopped trying\" is not \"this can never work\"."}},"title":"TaskError","additionalProperties":true},{"type":"null"}],"description":"Populated only while `status` is `failed`, else null."},"attempts":{"type":"integer","example":1,"description":"Lifetime execution count — one per claim, never reset. A manual retry extends the budget instead, so this stays honest about how much work a task has cost."},"collected":{"type":"boolean","example":false,"description":"Flips to true once the result is retrieved, which releases the handle number"},"is_seed":{"type":"boolean","example":false,"description":"Fixture data for the dashboard. Seed rows are excluded from the claim query and from both recovery sweeps, so a seeded `running` task never executes."},"created_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"When the task was accepted"},"updated_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"Last state change"}},"title":"TaskResponse"}}}},"400":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"404":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"409":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/tasks/{handle}/result":{"get":{"operationId":"collectTaskResult","tags":["tasks"],"description":"Take delivery of a finished task: returns the whole task with `result` populated and `collected: true`, and releases its handle number for reuse. Only a ready, not-yet-collected task can be collected — anything else is a 409.","parameters":[{"schema":{"type":"string","example":"scrape-1"},"in":"path","name":"handle","required":true,"description":"The task handle, `<lane>-<n>`"}],"responses":{"200":{"description":"Default Response","content":{"application/json":{"schema":{"type":"object","required":["id","handle","lane","params","status","result","error","attempts","collected","is_seed","created_at","updated_at"],"properties":{"id":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231","description":"Stable identity. Handles are recycled, so `scrape-1` may name three different tasks over an afternoon; this never changes and addresses retired tasks too."},"handle":{"type":"string","example":"scrape-1","description":"Short human-friendly name, `<lane>-<n>`, numbered per lane and recycled"},"lane":{"type":"string","example":"scrape","description":"Which worker runs this task"},"params":{"type":"object","additionalProperties":true,"description":"Whatever the submitter sent, normalised against the lane’s descriptors"},"status":{"anyOf":[{"type":"string","enum":["queued"]},{"type":"string","enum":["running"]},{"type":"string","enum":["ready"]},{"type":"string","enum":["failed"]},{"type":"string","enum":["cancelled"]}],"title":"TaskStatus","description":"Where a task is in its lifecycle"},"result":{"description":"The worker’s output. Populated only while `status` is `ready`, else null."},"error":{"anyOf":[{"type":"object","required":["reason","retryable"],"properties":{"reason":{"type":"string","example":"simulated failure","description":"Why it failed, in the worker’s own words — never a generic \"failed\""},"retryable":{"type":"boolean","example":true,"description":"Whether the error is transient by nature. Stays true on a transient error that ran out of attempts, because \"we stopped trying\" is not \"this can never work\"."}},"title":"TaskError","additionalProperties":true},{"type":"null"}],"description":"Populated only while `status` is `failed`, else null."},"attempts":{"type":"integer","example":1,"description":"Lifetime execution count — one per claim, never reset. A manual retry extends the budget instead, so this stays honest about how much work a task has cost."},"collected":{"type":"boolean","example":false,"description":"Flips to true once the result is retrieved, which releases the handle number"},"is_seed":{"type":"boolean","example":false,"description":"Fixture data for the dashboard. Seed rows are excluded from the claim query and from both recovery sweeps, so a seeded `running` task never executes."},"created_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"When the task was accepted"},"updated_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"Last state change"}},"title":"TaskResponse"}}}},"400":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"404":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"409":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/tasks/{handle}/history":{"get":{"operationId":"getTaskHistory","tags":["tasks"],"description":"Every transition this task went through, oldest first, with timestamps. This is where a retry’s interim failure reason and a restart’s requeue are recorded.","parameters":[{"schema":{"type":"string","example":"scrape-1"},"in":"path","name":"handle","required":true,"description":"The task handle, `<lane>-<n>`"}],"responses":{"200":{"description":"Default Response","content":{"application/json":{"schema":{"type":"array","items":{"type":"object","required":["id","type","at","detail"],"properties":{"id":{"type":"integer","example":42,"description":"Monotonic per database. Doubles as the SSE cursor."},"type":{"type":"string","example":"ready","description":"accepted | started | ready | failed | cancelled, plus informational types (retry_scheduled, requeued_on_restart, lease_expired, collected, retry_requested)"},"at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"When the transition was recorded"},"detail":{"type":"object","additionalProperties":true,"description":"Type-specific context: the reason, the attempt number, the backoff…"}},"title":"TaskEventResponse"},"title":"TaskHistoryResponse"}}}},"400":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"404":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"409":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/tasks/{handle}/cancel":{"post":{"operationId":"cancelTask","tags":["tasks"],"description":"Cancel a queued or running task — a running worker is actually aborted, not left to finish quietly. Also dismisses a failed task, which is what releases its handle number. Any other state is a 409.","parameters":[{"schema":{"type":"string","example":"scrape-1"},"in":"path","name":"handle","required":true,"description":"The task handle, `<lane>-<n>`"}],"responses":{"200":{"description":"Default Response","content":{"application/json":{"schema":{"type":"object","required":["id","handle","lane","params","status","result","error","attempts","collected","is_seed","created_at","updated_at"],"properties":{"id":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231","description":"Stable identity. Handles are recycled, so `scrape-1` may name three different tasks over an afternoon; this never changes and addresses retired tasks too."},"handle":{"type":"string","example":"scrape-1","description":"Short human-friendly name, `<lane>-<n>`, numbered per lane and recycled"},"lane":{"type":"string","example":"scrape","description":"Which worker runs this task"},"params":{"type":"object","additionalProperties":true,"description":"Whatever the submitter sent, normalised against the lane’s descriptors"},"status":{"anyOf":[{"type":"string","enum":["queued"]},{"type":"string","enum":["running"]},{"type":"string","enum":["ready"]},{"type":"string","enum":["failed"]},{"type":"string","enum":["cancelled"]}],"title":"TaskStatus","description":"Where a task is in its lifecycle"},"result":{"description":"The worker’s output. Populated only while `status` is `ready`, else null."},"error":{"anyOf":[{"type":"object","required":["reason","retryable"],"properties":{"reason":{"type":"string","example":"simulated failure","description":"Why it failed, in the worker’s own words — never a generic \"failed\""},"retryable":{"type":"boolean","example":true,"description":"Whether the error is transient by nature. Stays true on a transient error that ran out of attempts, because \"we stopped trying\" is not \"this can never work\"."}},"title":"TaskError","additionalProperties":true},{"type":"null"}],"description":"Populated only while `status` is `failed`, else null."},"attempts":{"type":"integer","example":1,"description":"Lifetime execution count — one per claim, never reset. A manual retry extends the budget instead, so this stays honest about how much work a task has cost."},"collected":{"type":"boolean","example":false,"description":"Flips to true once the result is retrieved, which releases the handle number"},"is_seed":{"type":"boolean","example":false,"description":"Fixture data for the dashboard. Seed rows are excluded from the claim query and from both recovery sweeps, so a seeded `running` task never executes."},"created_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"When the task was accepted"},"updated_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"Last state change"}},"title":"TaskResponse"}}}},"400":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"404":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"409":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/tasks/{handle}/retry":{"post":{"operationId":"retryTask","tags":["tasks"],"description":"Requeue a failed task with a fresh attempt budget. `attempts` is a lifetime counter and is deliberately not reset. Only a failed task can be retried.","parameters":[{"schema":{"type":"string","example":"scrape-1"},"in":"path","name":"handle","required":true,"description":"The task handle, `<lane>-<n>`"}],"responses":{"200":{"description":"Default Response","content":{"application/json":{"schema":{"type":"object","required":["id","handle","lane","params","status","result","error","attempts","collected","is_seed","created_at","updated_at"],"properties":{"id":{"type":"string","format":"uuid","example":"2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231","description":"Stable identity. Handles are recycled, so `scrape-1` may name three different tasks over an afternoon; this never changes and addresses retired tasks too."},"handle":{"type":"string","example":"scrape-1","description":"Short human-friendly name, `<lane>-<n>`, numbered per lane and recycled"},"lane":{"type":"string","example":"scrape","description":"Which worker runs this task"},"params":{"type":"object","additionalProperties":true,"description":"Whatever the submitter sent, normalised against the lane’s descriptors"},"status":{"anyOf":[{"type":"string","enum":["queued"]},{"type":"string","enum":["running"]},{"type":"string","enum":["ready"]},{"type":"string","enum":["failed"]},{"type":"string","enum":["cancelled"]}],"title":"TaskStatus","description":"Where a task is in its lifecycle"},"result":{"description":"The worker’s output. Populated only while `status` is `ready`, else null."},"error":{"anyOf":[{"type":"object","required":["reason","retryable"],"properties":{"reason":{"type":"string","example":"simulated failure","description":"Why it failed, in the worker’s own words — never a generic \"failed\""},"retryable":{"type":"boolean","example":true,"description":"Whether the error is transient by nature. Stays true on a transient error that ran out of attempts, because \"we stopped trying\" is not \"this can never work\"."}},"title":"TaskError","additionalProperties":true},{"type":"null"}],"description":"Populated only while `status` is `failed`, else null."},"attempts":{"type":"integer","example":1,"description":"Lifetime execution count — one per claim, never reset. A manual retry extends the budget instead, so this stays honest about how much work a task has cost."},"collected":{"type":"boolean","example":false,"description":"Flips to true once the result is retrieved, which releases the handle number"},"is_seed":{"type":"boolean","example":false,"description":"Fixture data for the dashboard. Seed rows are excluded from the claim query and from both recovery sweeps, so a seeded `running` task never executes."},"created_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"When the task was accepted"},"updated_at":{"type":"string","example":"2026-05-30T18:00:00.000Z","description":"Last state change"}},"title":"TaskResponse"}}}},"400":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"401":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"404":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}},"409":{"description":"Default Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}}}}}},"/api/v1/lanes":{"get":{"operationId":"listLanes","tags":["tasks"],"description":"What this engine can run, and the parameters each lane takes. Enough to render a submission form without hard-coding anything about a lane.","responses":{"200":{"description":"Default Response","content":{"application/json":{"schema":{"type":"array","items":{"type":"object","required":["lane","kind","params"],"properties":{"lane":{"type":"string","example":"scrape"},"kind":{"type":"string","example":"inline","description":"How the worker is dispatched"},"description":{"type":"string","example":"Simulated page scrape."},"params":{"type":"array","items":{"type":"object","required":["name","type","required"],"properties":{"name":{"type":"string","example":"duration_ms"},"type":{"anyOf":[{"type":"string","enum":["number"]},{"type":"string","enum":["boolean"]},{"type":"string","enum":["string"]}]},"required":{"type":"boolean","example":false},"default":{"description":"Applied when the caller omits it"},"description":{"type":"string"},"min":{"type":"number","description":"Inclusive lower bound, numbers only"},"max":{"type":"number","description":"Inclusive upper bound, numbers only"}},"title":"LaneParam"}}},"title":"LaneResponse"},"title":"LanesResponse"}}}}}}},"/api/v1/events":{"get":{"operationId":"streamEvents","tags":["tasks"],"description":"Server-sent stream of lifecycle events for your tasks. Every frame carries an `id`, so a browser reconnects with `Last-Event-ID` — or curl with `?since=` — and receives exactly what it missed. `accepted`, `ready`, `failed` and `cancelled` are the contract; other types are informational and may be ignored.","parameters":[{"schema":{"type":"integer","minimum":0,"example":0},"in":"query","name":"since","required":false,"description":"Replay every event after this id before streaming live ones. A browser sends the `Last-Event-ID` header instead and does not need this; it is here so a curl client can replay too. The header wins when both are present."}],"responses":{"200":{"description":"Default Response"}}}}}}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "web-app-template API",
+    "description": "REST API for web-app-template.",
+    "version": "0.1.0"
+  },
+  "components": {
+    "schemas": {
+      "ApiErrorResponse": {
+        "type": "object",
+        "required": [
+          "statusCode",
+          "message",
+          "error",
+          "correlationId"
+        ],
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 400
+          },
+          "message": {
+            "type": "string",
+            "example": "Validation Error"
+          },
+          "error": {
+            "type": "string",
+            "example": "Bad Request"
+          },
+          "correlationId": {
+            "type": "string",
+            "example": "YevPQs"
+          },
+          "subErrors": {
+            "type": "string",
+            "description": "Optional list of sub-errors",
+            "example": "incorrect email"
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          }
+        },
+        "title": "HealthResponse",
+        "description": "Health Check Succeeded"
+      },
+      "SignupRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "name",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "john@gmail.com",
+            "description": "Email address, used as the login identifier",
+            "format": "email",
+            "minLength": 5,
+            "maxLength": 320
+          },
+          "name": {
+            "type": "string",
+            "example": "John Doe",
+            "description": "Display name",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "password": {
+            "type": "string",
+            "example": "correct horse battery staple",
+            "description": "Plaintext password. Sent once, stored only as a scrypt hash.",
+            "minLength": 8,
+            "maxLength": 256
+          }
+        },
+        "title": "SignupRequest"
+      },
+      "UserResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "email",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231",
+            "description": "Entity's id"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2020-11-24T17:43:15.970Z",
+            "description": "Entity creation date"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2020-11-24T17:43:15.970Z",
+            "description": "Entity last update date"
+          },
+          "email": {
+            "type": "string",
+            "example": "test@mail.com",
+            "format": "email",
+            "description": "User's email address"
+          },
+          "name": {
+            "type": "string",
+            "example": "John Doe",
+            "description": "User's display name"
+          }
+        },
+        "title": "UserResponse"
+      },
+      "SessionResponse": {
+        "type": "object",
+        "required": [
+          "user",
+          "token",
+          "expiresIn"
+        ],
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
+          },
+          "token": {
+            "type": "string",
+            "example": "<header>.<payload>.<signature>",
+            "description": "Session JWT. Also set as an HttpOnly cookie on this response."
+          },
+          "expiresIn": {
+            "type": "number",
+            "example": 14400,
+            "description": "Token lifetime in seconds"
+          }
+        },
+        "title": "SessionResponse"
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "john@gmail.com",
+            "description": "Email address, used as the login identifier",
+            "format": "email",
+            "minLength": 5,
+            "maxLength": 320
+          },
+          "password": {
+            "type": "string",
+            "example": "correct horse battery staple",
+            "description": "Plaintext password. Sent once, stored only as a scrypt hash.",
+            "minLength": 8,
+            "maxLength": 256
+          }
+        },
+        "title": "LoginRequest"
+      },
+      "MeResponse": {
+        "type": "object",
+        "required": [
+          "user",
+          "kind"
+        ],
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "session"
+                ]
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "key"
+                ]
+              }
+            ],
+            "example": "session",
+            "description": "Which credential authenticated this request"
+          }
+        },
+        "title": "MeResponse"
+      },
+      "ApiKeyResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "lastUsedAt",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231",
+            "description": "Entity's id"
+          },
+          "name": {
+            "type": "string",
+            "example": "ci-pipeline",
+            "description": "Label for this key"
+          },
+          "prefix": {
+            "type": "string",
+            "example": "jrk_A1b2C3d4",
+            "description": "The leading characters of the key, so it can be identified in a list"
+          },
+          "lastUsedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "example": "2020-11-24T17:43:15.970Z",
+            "description": "When the key last authenticated a request; null if never used"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2020-11-24T17:43:15.970Z",
+            "description": "Entity creation date"
+          }
+        },
+        "title": "ApiKeyResponse"
+      },
+      "ApiKeyPaginatedResponse": {
+        "type": "object",
+        "required": [
+          "count",
+          "limit",
+          "page",
+          "data"
+        ],
+        "properties": {
+          "count": {
+            "type": "number",
+            "example": 5,
+            "description": "Total number of items"
+          },
+          "limit": {
+            "type": "number",
+            "example": 10,
+            "description": "Number of items per page"
+          },
+          "page": {
+            "type": "number",
+            "example": 0,
+            "description": "Page number"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKeyResponse"
+            }
+          }
+        },
+        "title": "ApiKeyPaginatedResponse"
+      },
+      "CreateApiKeyRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "ci-pipeline",
+            "description": "Label so a human can tell their keys apart",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "title": "CreateApiKeyRequest"
+      },
+      "CreatedApiKeyResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "lastUsedAt",
+          "createdAt",
+          "key"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231",
+            "description": "Entity's id"
+          },
+          "name": {
+            "type": "string",
+            "example": "ci-pipeline",
+            "description": "Label for this key"
+          },
+          "prefix": {
+            "type": "string",
+            "example": "jrk_A1b2C3d4",
+            "description": "The leading characters of the key, so it can be identified in a list"
+          },
+          "lastUsedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "example": "2020-11-24T17:43:15.970Z",
+            "description": "When the key last authenticated a request; null if never used"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2020-11-24T17:43:15.970Z",
+            "description": "Entity creation date"
+          },
+          "key": {
+            "type": "string",
+            "example": "jrk_<32-random-bytes-base64url>",
+            "description": "The secret. Shown exactly once — it cannot be retrieved again."
+          }
+        },
+        "title": "CreatedApiKeyResponse"
+      },
+      "CreateTaskRequest": {
+        "type": "object",
+        "required": [
+          "lane"
+        ],
+        "properties": {
+          "lane": {
+            "type": "string",
+            "example": "scrape",
+            "description": "A lane from GET /lanes. An unknown one is a 400.",
+            "minLength": 1
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Parameters for the lane’s worker. Declared params are validated against their descriptors; undeclared keys ride along untouched."
+          }
+        },
+        "title": "CreateTaskRequest"
+      },
+      "TaskStatus": {
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "queued"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "running"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "ready"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "failed"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "cancelled"
+            ]
+          }
+        ],
+        "title": "TaskStatus",
+        "description": "Where a task is in its lifecycle"
+      },
+      "TaskError": {
+        "type": "object",
+        "required": [
+          "reason",
+          "retryable"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "simulated failure",
+            "description": "Why it failed, in the worker’s own words — never a generic \"failed\""
+          },
+          "retryable": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the error is transient by nature. Stays true on a transient error that ran out of attempts, because \"we stopped trying\" is not \"this can never work\"."
+          }
+        },
+        "title": "TaskError",
+        "additionalProperties": true
+      },
+      "TaskResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "handle",
+          "lane",
+          "params",
+          "status",
+          "result",
+          "error",
+          "attempts",
+          "collected",
+          "is_seed",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231",
+            "description": "Stable identity. Handles are recycled, so `scrape-1` may name three different tasks over an afternoon; this never changes and addresses retired tasks too."
+          },
+          "handle": {
+            "type": "string",
+            "example": "scrape-1",
+            "description": "Short human-friendly name, `<lane>-<n>`, numbered per lane and recycled"
+          },
+          "lane": {
+            "type": "string",
+            "example": "scrape",
+            "description": "Which worker runs this task"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Whatever the submitter sent, normalised against the lane’s descriptors"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "result": {
+            "description": "The worker’s output. Populated only while `status` is `ready`, else null."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Populated only while `status` is `failed`, else null."
+          },
+          "attempts": {
+            "type": "integer",
+            "example": 1,
+            "description": "Lifetime execution count — one per claim, never reset. A manual retry extends the budget instead, so this stays honest about how much work a task has cost."
+          },
+          "collected": {
+            "type": "boolean",
+            "example": false,
+            "description": "Flips to true once the result is retrieved, which releases the handle number"
+          },
+          "is_seed": {
+            "type": "boolean",
+            "example": false,
+            "description": "Fixture data for the dashboard. Seed rows are excluded from the claim query and from both recovery sweeps, so a seeded `running` task never executes."
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2026-05-30T18:00:00.000Z",
+            "description": "When the task was accepted"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2026-05-30T18:00:00.000Z",
+            "description": "Last state change"
+          }
+        },
+        "title": "TaskResponse"
+      },
+      "TaskListResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/TaskResponse"
+        },
+        "title": "TaskListResponse"
+      },
+      "TaskStatsResponse": {
+        "type": "object",
+        "required": [
+          "queued",
+          "running",
+          "ready",
+          "failed",
+          "cancelled"
+        ],
+        "properties": {
+          "queued": {
+            "type": "integer",
+            "example": 3
+          },
+          "running": {
+            "type": "integer",
+            "example": 2
+          },
+          "ready": {
+            "type": "integer",
+            "example": 11
+          },
+          "failed": {
+            "type": "integer",
+            "example": 1
+          },
+          "cancelled": {
+            "type": "integer",
+            "example": 0
+          }
+        },
+        "title": "TaskStatsResponse"
+      },
+      "TaskEventResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "at",
+          "detail"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 42,
+            "description": "Monotonic per database. Doubles as the SSE cursor."
+          },
+          "type": {
+            "type": "string",
+            "example": "ready",
+            "description": "accepted | started | ready | failed | cancelled, plus informational types (retry_scheduled, requeued_on_restart, lease_expired, collected, retry_requested)"
+          },
+          "at": {
+            "type": "string",
+            "example": "2026-05-30T18:00:00.000Z",
+            "description": "When the transition was recorded"
+          },
+          "detail": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Type-specific context: the reason, the attempt number, the backoff…"
+          }
+        },
+        "title": "TaskEventResponse"
+      },
+      "TaskHistoryResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/TaskEventResponse"
+        },
+        "title": "TaskHistoryResponse"
+      },
+      "LaneParam": {
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "required"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "duration_ms"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "number"
+                ]
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "boolean"
+                ]
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "string"
+                ]
+              }
+            ]
+          },
+          "required": {
+            "type": "boolean",
+            "example": false
+          },
+          "default": {
+            "description": "Applied when the caller omits it"
+          },
+          "description": {
+            "type": "string"
+          },
+          "min": {
+            "type": "number",
+            "description": "Inclusive lower bound, numbers only"
+          },
+          "max": {
+            "type": "number",
+            "description": "Inclusive upper bound, numbers only"
+          }
+        },
+        "title": "LaneParam"
+      },
+      "LaneResponse": {
+        "type": "object",
+        "required": [
+          "lane",
+          "kind",
+          "params"
+        ],
+        "properties": {
+          "lane": {
+            "type": "string",
+            "example": "scrape"
+          },
+          "kind": {
+            "type": "string",
+            "example": "inline",
+            "description": "How the worker is dispatched"
+          },
+          "description": {
+            "type": "string",
+            "example": "Simulated page scrape."
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LaneParam"
+            }
+          }
+        },
+        "title": "LaneResponse"
+      },
+      "LanesResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/LaneResponse"
+        },
+        "title": "LanesResponse"
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health",
+        "tags": [
+          "health"
+        ],
+        "description": "Health check",
+        "responses": {
+          "200": {
+            "description": "Health Check Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/signup": {
+      "post": {
+        "operationId": "signup",
+        "tags": [
+          "auth"
+        ],
+        "description": "Create an account and start a session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login",
+        "tags": [
+          "auth"
+        ],
+        "description": "Exchange email and password for a session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "tags": [
+          "auth"
+        ],
+        "description": "Clear the session cookie",
+        "responses": {
+          "204": {
+            "description": "Session Cleared"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "me",
+        "tags": [
+          "auth"
+        ],
+        "description": "The authenticated user and the credential that identified them",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/keys": {
+      "get": {
+        "operationId": "listApiKeys",
+        "tags": [
+          "keys"
+        ],
+        "description": "List your active API keys. Never returns the secret.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "example": 10,
+              "minimum": 1,
+              "maximum": 99999
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Specifies a limit of returned records"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "example": 0,
+              "minimum": 0,
+              "maximum": 99999
+            },
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "description": "Page number"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyPaginatedResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createApiKey",
+        "tags": [
+          "keys"
+        ],
+        "description": "Create an API key. The secret is returned once and never again.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedApiKeyResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/keys/{id}": {
+      "delete": {
+        "operationId": "revokeApiKey",
+        "tags": [
+          "keys"
+        ],
+        "description": "Revoke an API key. The row is kept so its history stays auditable.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Entity's id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "API Key Revoked"
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks": {
+      "post": {
+        "operationId": "createTask",
+        "tags": [
+          "tasks"
+        ],
+        "description": "Enqueue a job. Returns the task — with its handle — before any worker runs; the submit path never waits on the work itself.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listTasks",
+        "tags": [
+          "tasks"
+        ],
+        "description": "Your tasks, newest first. Filter by status, lane and creation date; sort and page. Returns a bare array rather than the paginated envelope the rest of this API uses — the shape is fixed by the API contract.",
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/TaskStatus"
+            },
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "description": "Where a task is in its lifecycle"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "scrape"
+            },
+            "in": "query",
+            "name": "lane",
+            "required": false,
+            "description": "Filter by lane"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2026-05-30T18:00:00.000Z"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "description": "Only tasks created at or after this instant (ISO 8601)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2026-05-30T18:00:00.000Z"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "description": "Only tasks created at or before this instant (ISO 8601)"
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "asc"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "desc"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "description": "By creation time. Defaults to `desc` — newest first."
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "example": 20
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "example": 0
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/stats": {
+      "get": {
+        "operationId": "taskStats",
+        "tags": [
+          "tasks"
+        ],
+        "description": "Your task counts per status. Every status is present, zeroed when empty.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskStatsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/id/{id}": {
+      "get": {
+        "operationId": "getTaskById",
+        "tags": [
+          "tasks"
+        ],
+        "description": "One task by its immutable id. Handles are recycled, so this is the only address that keeps pointing at the same task once it retires.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Task's id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{handle}": {
+      "get": {
+        "operationId": "getTask",
+        "tags": [
+          "tasks"
+        ],
+        "description": "One task by handle. Resolves to the active task holding that number.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "scrape-1"
+            },
+            "in": "path",
+            "name": "handle",
+            "required": true,
+            "description": "The task handle, `<lane>-<n>`"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{handle}/result": {
+      "get": {
+        "operationId": "collectTaskResult",
+        "tags": [
+          "tasks"
+        ],
+        "description": "Take delivery of a finished task: returns the whole task with `result` populated and `collected: true`, and releases its handle number for reuse. Only a ready, not-yet-collected task can be collected — anything else is a 409.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "scrape-1"
+            },
+            "in": "path",
+            "name": "handle",
+            "required": true,
+            "description": "The task handle, `<lane>-<n>`"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{handle}/history": {
+      "get": {
+        "operationId": "getTaskHistory",
+        "tags": [
+          "tasks"
+        ],
+        "description": "Every transition this task went through, oldest first, with timestamps. This is where a retry’s interim failure reason and a restart’s requeue are recorded.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "scrape-1"
+            },
+            "in": "path",
+            "name": "handle",
+            "required": true,
+            "description": "The task handle, `<lane>-<n>`"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskHistoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{handle}/cancel": {
+      "post": {
+        "operationId": "cancelTask",
+        "tags": [
+          "tasks"
+        ],
+        "description": "Cancel a queued or running task — a running worker is actually aborted, not left to finish quietly. Also dismisses a failed task, which is what releases its handle number. Any other state is a 409.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "scrape-1"
+            },
+            "in": "path",
+            "name": "handle",
+            "required": true,
+            "description": "The task handle, `<lane>-<n>`"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{handle}/retry": {
+      "post": {
+        "operationId": "retryTask",
+        "tags": [
+          "tasks"
+        ],
+        "description": "Requeue a failed task with a fresh attempt budget. `attempts` is a lifetime counter and is deliberately not reset. Only a failed task can be retried.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "scrape-1"
+            },
+            "in": "path",
+            "name": "handle",
+            "required": true,
+            "description": "The task handle, `<lane>-<n>`"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lanes": {
+      "get": {
+        "operationId": "listLanes",
+        "tags": [
+          "tasks"
+        ],
+        "description": "What this engine can run, and the parameters each lane takes. Enough to render a submission form without hard-coding anything about a lane.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LanesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events": {
+      "get": {
+        "operationId": "streamEvents",
+        "tags": [
+          "tasks"
+        ],
+        "description": "Server-sent stream of lifecycle events for your tasks. Every frame carries an `id`, so a browser reconnects with `Last-Event-ID` — or curl with `?since=` — and receives exactly what it missed. `accepted`, `ready`, `failed` and `cancelled` are the contract; other types are informational and may be ignored.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "example": 0
+            },
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "description": "Replay every event after this id before streaming live ones. A browser sends the `Last-Event-ID` header instead and does not need this; it is here so a curl client can replay too. The header wins when both are present."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    }
+  }
+}
