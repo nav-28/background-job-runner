@@ -1,7 +1,6 @@
 {
   "name": "@app/backend",
   "version": "0.1.0",
-  "description": "Fastify backend API for web-app-template.",
   "license": "MIT",
   "type": "module",
   "imports": {
@@ -63,5 +62,12 @@
     "pino-pretty": "13.1.3",
     "typescript": "5.9.3"
   },
-  "keywords": ["fastify", "typescript", "postgres", "openapi", "template", "boilerplate"]
+  "keywords": [
+    "fastify",
+    "typescript",
+    "postgres",
+    "openapi",
+    "template",
+    "boilerplate"
+  ]
 }

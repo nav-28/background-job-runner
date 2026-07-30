@@ -15,8 +15,8 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: 'web-app-template',
-  description: 'Next.js + MUI + TanStack Query + Zustand template',
+  title: 'Background Job Runner',
+  description: 'A platform to kick off slow background jobs',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

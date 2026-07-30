@@ -1,8 +1,8 @@
 {
-  "name": "web-app-template",
+  "name": "background-job-runner",
   "version": "0.1.0",
-  "private": true,
-  "description": "Fastify backend + Next.js frontend monorepo template for shipping MVPs fast.",
+  "license": "MIT",
+  "description": "A platform to kick off slow background jobs",
   "packageManager": "pnpm@10.34.5",
   "engines": {
     "node": ">=24.0.0",
