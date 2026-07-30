@@ -186,6 +186,12 @@
       "linter": {
         "rules": { "correctness": { "noGlobalDirnameFilename": "off" } }
       }
+    },
+    {
+      "includes": ["**/*.routes.ts", "**/*.schema.ts"],
+      "linter": {
+        "rules": { "security": { "noSecrets": "off" } }
+      }
     }
   ],
   "assist": {

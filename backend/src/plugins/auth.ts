@@ -60,8 +60,8 @@ const BEARER_SCHEME = 'bearer ';
 function sessionCookieOptions(): CookieSerializeOptions {
   return {
     httpOnly: true,
-    secure: env.isProduction,
-    sameSite: 'lax',
+    secure: env.auth.cookieSecure,
+    sameSite: env.auth.cookieSameSite,
     path: '/',
     maxAge: env.auth.sessionTtlSeconds,
   };

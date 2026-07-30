@@ -33,6 +33,14 @@ const schema = Type.Object({
   JWT_SECRET: Type.String({ minLength: 32 }),
   // Session lifetime, in seconds. Also the cookie's Max-Age.
   SESSION_TTL_SECONDS: Type.Number({ default: 14_400, minimum: 60 }),
+  // `lax` is right whenever the UI and the API share a registrable domain, including different
+  // ports on localhost and sibling subdomains. Set `none` when they do not — a Codespaces
+  // forwarded port, say — or the browser withholds the session cookie and every request 401s.
+  // `none` requires Secure, which is applied below.
+  SESSION_COOKIE_SAMESITE: Type.Union(
+    [Type.Literal('lax'), Type.Literal('strict'), Type.Literal('none')],
+    { default: 'lax' },
+  ),
 
   // ── The orchestration engine ────────────────────────────────────────────────
   /** Maximum jobs in flight in this process at once. */
@@ -80,6 +88,9 @@ export default {
   auth: {
     jwtSecret: env.JWT_SECRET,
     sessionTtlSeconds: env.SESSION_TTL_SECONDS,
+    cookieSameSite: env.SESSION_COOKIE_SAMESITE,
+    // SameSite=None is only honoured on a Secure cookie, so asking for one implies the other.
+    cookieSecure: env.NODE_ENV === 'production' || env.SESSION_COOKIE_SAMESITE === 'none',
   },
   /** Every EngineConfig knob except `workers`, `bus`, `logger` and `runnerId`. */
   engine: {
