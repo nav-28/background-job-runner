@@ -134,6 +134,29 @@ const taskRoutes: FastifyPluginAsyncTypebox = async (app) => {
   );
 
   app.get(
+    '/tasks/id/:id/history',
+    {
+      config: AUTHENTICATED,
+      schema: {
+        // biome-ignore lint/security/noSecrets: an operationId, read as high-entropy by the rule
+        operationId: 'getTaskHistoryById',
+        description:
+          'Every transition this task went through, oldest first. Addressed by id, so it keeps ' +
+          'answering after the task retires and its handle is reused — the handle form resolves ' +
+          'to whichever task holds the number now.',
+        tags: ['tasks'],
+        params: taskIdParamsSchema,
+        response: { 200: taskHistoryResponseSchema, ...ERROR_RESPONSES },
+      },
+    },
+    async (req, res) => {
+      const { userId } = requireAuth(req);
+      const events = await app.engine.historyById(userId, req.params.id);
+      return res.status(200).send(events.map(toTaskEventResponse));
+    },
+  );
+
+  app.get(
     '/tasks/:handle',
     {
       config: AUTHENTICATED,
@@ -182,7 +205,8 @@ const taskRoutes: FastifyPluginAsyncTypebox = async (app) => {
         operationId: 'getTaskHistory',
         description:
           'Every transition this task went through, oldest first, with timestamps. This is ' +
-          'where a retry’s interim failure reason and a restart’s requeue are recorded.',
+          'where a retry’s interim failure reason and a restart’s requeue are recorded. ' +
+          'Resolves to whichever task holds the handle now; use the id form for a retired one.',
         tags: ['tasks'],
         params: taskHandleParamsSchema,
         response: { 200: taskHistoryResponseSchema, ...ERROR_RESPONSES },

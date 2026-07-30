@@ -71,6 +71,11 @@ export class OrchestrationEngine implements Engine {
     return repo.history(userId, task.id);
   };
 
+  historyById = async (userId: string, id: string): Promise<TaskEventWithTask[]> => {
+    const task = await this.getById(userId, id);
+    return repo.history(userId, task.id);
+  };
+
   /**
    * Only a `ready` task can be collected; collecting frees the handle number for reuse, which is
    * why it is an explicit step and not implied by `ready`.

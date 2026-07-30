@@ -101,6 +101,13 @@ describe('task API', async () => {
       headers: bearer(credential),
     });
 
+  const historyById = (credential: string, id: string) =>
+    app.inject({
+      method: 'GET',
+      url: `/api/v1/tasks/id/${id}/history`,
+      headers: bearer(credential),
+    });
+
   const collect = (credential: string, handle: string) =>
     app.inject({
       method: 'GET',
@@ -657,6 +664,62 @@ describe('task API', async () => {
       // Ids are the SSE cursor: monotonic, so history and the stream agree on ordering.
       assert.ok(events[1].id > events[0].id);
       assert.equal(typeof events[0].detail, 'object');
+    });
+  });
+
+  describe('GET /tasks/id/{id}/history', () => {
+    it('agrees with the handle form while the task still holds its handle', async () => {
+      const { token } = await signup();
+      const task = await submitOk(token, 'scrape', { duration_ms: 20 });
+      await waitForStatus(token, task.handle, 'ready');
+
+      const [byHandle, byId] = await Promise.all([
+        history(token, task.handle),
+        historyById(token, task.id),
+      ]);
+
+      assert.equal(byId.statusCode, 200);
+      assert.deepEqual(byId.json(), byHandle.json());
+    });
+
+    /**
+     * The reason this endpoint exists. `findByHandle` is `ORDER BY "createdAt" DESC LIMIT 1`, so
+     * once a released number is reused the handle form silently answers for the new holder — and
+     * the event payload carries no task id, so a caller cannot tell it got the wrong task.
+     */
+    it('keeps answering for a retired task whose handle has been reused', async () => {
+      const { token } = await signup();
+
+      const first = await submitOk(token, 'scrape', { duration_ms: 20 });
+      await waitForStatus(token, first.handle, 'ready');
+      assert.equal((await collect(token, first.handle)).statusCode, 200);
+
+      // Collecting released the number, so this reclaims it.
+      const second = await submitOk(token, 'scrape', { duration_ms: 20 });
+      assert.equal(second.handle, first.handle, 'the handle number must have been reused');
+      assert.notEqual(second.id, first.id);
+
+      const retired = await historyById(token, first.id);
+      assert.equal(retired.statusCode, 200);
+      const retiredTypes = (retired.json() as { type: string }[]).map((event) => event.type);
+      assert.ok(retiredTypes.includes('collected'), 'the retired task’s own timeline');
+
+      const reused = await historyById(token, second.id);
+      assert.ok(
+        !(reused.json() as { type: string }[]).map((event) => event.type).includes('collected'),
+        'the new holder has its own, shorter timeline',
+      );
+
+      // The handle form now speaks for the new holder, which is exactly why id addressing exists.
+      assert.deepEqual((await history(token, first.handle)).json(), reused.json());
+    });
+
+    it('hides another user’s task behind a 404 rather than an empty list', async () => {
+      const owner = await signup('owner@example.com');
+      const stranger = await signup('stranger@example.com');
+      const task = await submitOk(owner.token, 'scrape', { duration_ms: 20 });
+
+      assert.equal((await historyById(stranger.token, task.id)).statusCode, 404);
     });
   });
 

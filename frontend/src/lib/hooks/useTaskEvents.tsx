@@ -1,10 +1,13 @@
 'use client';
 
+import Button from '@mui/material/Button';
 import { useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { enqueueSnackbar } from '@/components/GlobalSnackbar/store';
+import { closeSnackbar, enqueueSnackbar } from '@/components/GlobalSnackbar/store';
 import type { SnackbarMessage, SnackbarOptions } from '@/components/GlobalSnackbar/types';
 import { apiUrl } from '@/lib/api/config';
+import { isTaskQuery } from '@/lib/api/task-queries';
 
 export interface TaskEvent {
   id: number;
@@ -41,14 +44,33 @@ interface CompletionToast {
 }
 
 /**
- * The only place a completion toast is built. Phase 3 adds a "View" `action`
- * linking to /dashboard/{handle} here and nowhere else.
+ * The only place a completion toast is built.
  */
 function completionToast(event: TaskEvent): CompletionToast | null {
   const variant = COMPLETION_VARIANTS[event.type];
   if (!variant) return null;
 
-  return { message: `Task ${event.handle} ${event.type}`, options: { variant } };
+  // The timestamp keeps the key unique if a reconnect redelivers a frame already toasted.
+  const key = `task-event-${event.id}-${Date.now()}`;
+
+  return {
+    message: `Task ${event.handle} ${event.type}`,
+    options: {
+      key,
+      variant,
+      action: (
+        <Button
+          component={Link}
+          href={`/dashboard/${event.task_id}`}
+          size="small"
+          color="inherit"
+          onClick={() => closeSnackbar(key)}
+        >
+          View
+        </Button>
+      ),
+    },
+  };
 }
 
 /**
@@ -104,12 +126,7 @@ export function useTaskEvents({ enabled = true }: UseTaskEventsOptions = {}): Us
 
     // Invalidate all tasks queries to refresh the data
     const invalidateTaskQueries = () => {
-      void queryClient.invalidateQueries({
-        predicate: (query) => {
-          const root = query.queryKey[0];
-          return typeof root === 'string' && root.startsWith('/api/v1/tasks');
-        },
-      });
+      void queryClient.invalidateQueries({ predicate: isTaskQuery });
     };
 
     const scheduleInvalidate = () => {

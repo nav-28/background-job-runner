@@ -1359,6 +1359,80 @@
         }
       }
     },
+    "/api/v1/tasks/id/{id}/history": {
+      "get": {
+        "operationId": "getTaskHistoryById",
+        "tags": [
+          "tasks"
+        ],
+        "description": "Every transition this task went through, oldest first. Addressed by id, so it keeps answering after the task retires and its handle is reused — the handle form resolves to whichever task holds the number now.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Task's id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskHistoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tasks/{handle}": {
       "get": {
         "operationId": "getTask",
@@ -1511,7 +1585,7 @@
         "tags": [
           "tasks"
         ],
-        "description": "Every transition this task went through, oldest first, with timestamps. This is where a retry’s interim failure reason and a restart’s requeue are recorded.",
+        "description": "Every transition this task went through, oldest first, with timestamps. This is where a retry’s interim failure reason and a restart’s requeue are recorded. Resolves to whichever task holds the handle now; use the id form for a retired one.",
         "parameters": [
           {
             "schema": {

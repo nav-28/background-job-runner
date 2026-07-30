@@ -309,8 +309,14 @@ export interface Engine {
   /**
    * Every transition one task went through, oldest first. Preconditions are `get`'s: the handle
    * must parse and must belong to `userId`.
+   *
+   * Resolves the handle to whichever task holds it *now*, so a retired task whose number has been
+   * reused answers with the new holder's history. Use `historyById` when identity matters.
    */
   history(userId: string, handle: string): Promise<TaskEventWithTask[]>;
+
+  /** Same, by task id — the only form that keeps answering for a retired task. */
+  historyById(userId: string, id: string): Promise<TaskEventWithTask[]>;
 
   /**
    * Takes delivery of a finished task. Only a `ready`, not-yet-collected task can be collected —

@@ -463,6 +463,127 @@ export function useGetTaskById<
 }
 
 /**
+ * Every transition this task went through, oldest first. Addressed by id, so it keeps answering after the task retires and its handle is reused — the handle form resolves to whichever task holds the number now.
+ */
+export const getTaskHistoryById = (
+  id: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<TaskHistoryResponse>(
+    { url: `/api/v1/tasks/id/${id}/history`, method: 'GET', signal },
+    options,
+  );
+};
+
+export const getGetTaskHistoryByIdQueryKey = (id?: string) => {
+  return [`/api/v1/tasks/id/${id}/history`] as const;
+};
+
+export const getGetTaskHistoryByIdQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTaskHistoryById>>,
+  TError = ErrorType<ApiErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaskHistoryById>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTaskHistoryByIdQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaskHistoryById>>> = ({ signal }) =>
+    getTaskHistoryById(id, requestOptions, signal);
+
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTaskHistoryById>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetTaskHistoryByIdQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTaskHistoryById>>
+>;
+export type GetTaskHistoryByIdQueryError = ErrorType<ApiErrorResponse>;
+
+export function useGetTaskHistoryById<
+  TData = Awaited<ReturnType<typeof getTaskHistoryById>>,
+  TError = ErrorType<ApiErrorResponse>,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaskHistoryById>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTaskHistoryById>>,
+          TError,
+          Awaited<ReturnType<typeof getTaskHistoryById>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTaskHistoryById<
+  TData = Awaited<ReturnType<typeof getTaskHistoryById>>,
+  TError = ErrorType<ApiErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTaskHistoryById>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTaskHistoryById>>,
+          TError,
+          Awaited<ReturnType<typeof getTaskHistoryById>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTaskHistoryById<
+  TData = Awaited<ReturnType<typeof getTaskHistoryById>>,
+  TError = ErrorType<ApiErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaskHistoryById>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+export function useGetTaskHistoryById<
+  TData = Awaited<ReturnType<typeof getTaskHistoryById>>,
+  TError = ErrorType<ApiErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaskHistoryById>>, TError, TData>>;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetTaskHistoryByIdQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
  * One task by handle. Resolves to the active task holding that number.
  */
 export const getTask = (
@@ -699,7 +820,7 @@ export function useCollectTaskResult<
 }
 
 /**
- * Every transition this task went through, oldest first, with timestamps. This is where a retry’s interim failure reason and a restart’s requeue are recorded.
+ * Every transition this task went through, oldest first, with timestamps. This is where a retry’s interim failure reason and a restart’s requeue are recorded. Resolves to whichever task holds the handle now; use the id form for a retired one.
  */
 export const getTaskHistory = (
   handle: string,

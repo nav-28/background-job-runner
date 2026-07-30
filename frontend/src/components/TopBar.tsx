@@ -4,16 +4,23 @@ import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
+import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useLogout, useMe } from '@/lib/api/endpoints/auth/auth';
 
+const NAV_LINKS = [
+  { href: '/dashboard', label: 'Tasks' },
+  { href: '/keys', label: 'API keys' },
+];
+
 export default function TopBar() {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
 
   /**
@@ -54,8 +61,18 @@ export default function TopBar() {
               mr: 2,
             }}
           >
-            Background Job Runner
+            Job Runner
           </Typography>
+
+          {me ? (
+            <Stack direction="row" spacing={0.5} component="nav">
+              {NAV_LINKS.map((link) => (
+                <Button key={link.href} component={Link} href={link.href} color="inherit">
+                  {link.label}
+                </Button>
+              ))}
+            </Stack>
+          ) : null}
 
           <Box sx={{ flexGrow: 1 }} />
 
