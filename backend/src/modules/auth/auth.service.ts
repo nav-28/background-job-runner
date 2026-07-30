@@ -3,16 +3,6 @@ import { hashPassword, verifyPassword } from '#src/lib/password.ts';
 import * as userService from '#src/modules/user/user.service.ts';
 import type { User } from '#src/modules/user/user.types.ts';
 
-/**
- * Credential logic. No HTTP objects in here — signing tokens and setting cookies is
- * the route's job, because those are transport concerns.
- */
-
-/**
- * One message for every failure mode. An unknown email, a wrong password and an
- * account with no password set must be indistinguishable, or the endpoint becomes
- * an oracle for "does this person have an account here".
- */
 const INVALID_CREDENTIALS = 'Invalid email or password';
 
 /**

@@ -1,5 +1,5 @@
 import { handleOf, toEngineEvent } from '#src/engine/events.ts';
-import { allocateAndInsert } from '#src/engine/handles.ts';
+import { allocateHandleAndInsert } from '#src/engine/handles.ts';
 import * as repo from '#src/engine/repository.ts';
 import type { TaskRunner } from '#src/engine/runner.ts';
 import {
@@ -42,7 +42,7 @@ export class OrchestrationEngine implements Engine {
     params: Record<string, unknown> = {},
   ): Promise<Task> => {
     const normalised = this.#registry.validateParams(lane, params);
-    const { task, event } = await allocateAndInsert(userId, lane, normalised, {
+    const { task, event } = await allocateHandleAndInsert(userId, lane, normalised, {
       maxAttempts: this.config.maxAttempts,
     });
     // After the allocation transaction has committed, never before.

@@ -9,7 +9,6 @@ export function getDb(): ReturnType<typeof postgres> {
     sql = postgres(env.db.url, {
       debug: (conn: number, query: string, params: unknown[]) => {
         if (env.log.level === LogLevel.debug) {
-          // biome-ignore lint/suspicious/noConsole: SQL tracing in debug mode only
           console.debug(`SQL [conn ${conn}]: ${query.trim()} -- ${JSON.stringify(params)}`);
         }
       },

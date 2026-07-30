@@ -63,8 +63,6 @@ export async function listApiKeys(
 export async function revokeApiKey(userId: string, id: string): Promise<void> {
   const revoked = await apiKeyRepository.revokeById(userId, id);
   if (!revoked) {
-    // Same answer whether the key belongs to someone else or never existed, so
-    // this endpoint cannot be used to probe for other users' key ids.
     throw new NotFoundError(`API key with id ${id} not found`);
   }
 }

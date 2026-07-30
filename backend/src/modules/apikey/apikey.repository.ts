@@ -3,8 +3,6 @@ import { DatabaseError } from '#src/lib/errors.ts';
 import type { Paginated } from '#src/lib/http.ts';
 import type { ApiKey, ApiKeyIdentity } from '#src/modules/apikey/apikey.types.ts';
 
-/** SQL for api_keys. Nothing here knows about HTTP. */
-
 /**
  * How stale `lastUsedAt` is allowed to get. The gate lives in the WHERE clause so
  * a busy key costs one UPDATE per minute rather than one per request.

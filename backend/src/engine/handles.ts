@@ -54,7 +54,7 @@ export interface Allocation {
  *
  * Nothing is published here — the caller publishes `accepted` after the transaction commits.
  */
-export async function allocateAndInsert(
+export async function allocateHandleAndInsert(
   userId: string,
   lane: string,
   params: Record<string, unknown>,
