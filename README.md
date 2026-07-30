@@ -166,3 +166,12 @@ Engine tuning — concurrency, lease, backoff, attempt budget, job timeout — i
 
 Deeper notes on the engine: [`backend/docs/OrchestrationEngine.md`](backend/docs/OrchestrationEngine.md).
 Backend conventions: [`backend/AGENTS.md`](backend/AGENTS.md).
+
+
+## Github Codespaces
+
+This repo is setup up to work inside github codespaces. To test out the live server, make sure that 
+the backend api's visibility is set to `Public` so that the frontend can make API requests. 
+
+If project doesn't run on its own, open a terminal and run `./.devcontainer/post-create.sh` to create
+the postgres container and seed the db. Then finally run `pnpm dev` to start the dev server.
