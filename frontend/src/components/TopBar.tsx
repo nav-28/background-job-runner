@@ -9,7 +9,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useLogout, useMe } from '@/lib/api/endpoints/auth/auth';
 
@@ -20,7 +20,6 @@ const NAV_LINKS = [
 
 export default function TopBar() {
   const router = useRouter();
-  const pathname = usePathname();
   const queryClient = useQueryClient();
 
   /**
