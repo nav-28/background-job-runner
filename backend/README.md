@@ -1,6 +1,6 @@
 # Backend
 
-Fastify API for **web-app-template**. TypeScript, ESM-only, Node ≥ 24 (native TS execution, no build
+Fastify API and orchestration engine for the job runner. TypeScript, ESM-only, Node ≥ 24 (native TS execution, no build
 step). Postgres via [postgres.js](https://github.com/porsager/postgres), migrations via
 [DBMate](https://github.com/amacneil/dbmate).
 
@@ -8,7 +8,7 @@ Deliberately small: a request goes **route → service → repository**, and eve
 plain function you can find with go-to-definition. No DI container, no command/query buses, no
 generated wiring.
 
-> Part of the [`web-app-template`](../README.md) monorepo. Conventions and the guide for adding a
+> Part of the [job runner](../README.md) monorepo. Conventions and the guide for adding a
 > module live in [`AGENTS.md`](AGENTS.md).
 
 ## Stack

@@ -1,0 +1,16 @@
+# Without this the hook exits with the status of the LAST command, so a failing type check
+# followed by passing tests reports success and the commit goes through.
+set -e
+
+# Run per package: each has its own biome.json, and Biome reads config from its working
+# directory, so one root invocation would lint both with default rules.
+pnpm -r exec biome check --staged --write --no-errors-on-unmatched
+
+# --write may have reformatted files that were already staged; restage those, and only those.
+# A convenience, not a check — never fail the commit over it.
+git update-index --again || true
+
+pnpm -r type:check
+
+# Unit tests only — neither package's `test` script touches Postgres.
+pnpm -r test

@@ -1,7 +1,7 @@
 {
   "Servers": {
     "1": {
-      "Name": "web-app-template (local)",
+      "Name": "job-runner (local)",
       "Group": "Servers",
       "Host": "postgres",
       "Port": 5432,

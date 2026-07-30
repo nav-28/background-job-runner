@@ -1,6 +1,6 @@
 # Frontend
 
-Next.js (App Router) frontend for the template. Talks to the Fastify backend through a
+Next.js (App Router) dashboard for the job runner. Talks to the Fastify backend through a
 **fully-typed client generated from the backend's OpenAPI spec**.
 
 ## Stack

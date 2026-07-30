@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "web-app-template API",
-    "description": "REST API for web-app-template.",
-    "version": "0.1.0"
+    "title": "Job Runner API",
+    "description": "Submit background work, watch it run, collect the result.",
+    "version": "0.0.0"
   },
   "components": {
     "schemas": {

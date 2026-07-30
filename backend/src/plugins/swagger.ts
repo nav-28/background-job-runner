@@ -14,8 +14,8 @@ async function swaggerPlugin(fastify: FastifyInstance) {
     openapi: {
       openapi: '3.1.0',
       info: {
-        title: 'web-app-template API',
-        description: 'REST API for web-app-template.',
+        title: 'Job Runner API',
+        description: 'Submit background work, watch it run, collect the result.',
         version: process.env.npm_package_version ?? '0.0.0',
       },
     },

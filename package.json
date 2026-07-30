@@ -9,6 +9,7 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
+    "prepare": "husky",
     "dev": "pnpm --parallel --filter @app/frontend --filter @app/backend dev",
     "dev:backend": "pnpm --filter @app/backend start",
     "dev:frontend": "pnpm --filter @app/frontend dev",
@@ -19,5 +20,8 @@
     "generate:api:live": "pnpm --filter @app/frontend generate:api:live",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "husky": "9.1.7"
   }
 }

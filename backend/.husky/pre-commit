@@ -1,3 +1,0 @@
-biome check --staged --write --no-errors-on-unmatched
-pnpm type:check
-pnpm test
