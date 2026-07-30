@@ -28,7 +28,7 @@
     "db:create-seed": "dbmate -e DBMATE_DATABASE_URL -d ./db/seeds/ new",
     "db:seed": "dbmate -e DBMATE_DATABASE_URL -d ./db/seeds/ up",
     "db:seed:down": "dbmate -e DBMATE_DATABASE_URL -d ./db/seeds/ down",
-    "db:seed:reset": "pnpm db:seed:down && pnpm db:seed:down && pnpm db:seed",
+    "db:seed:reset": "node --env-file=.env scripts/reset-seeds.mjs && pnpm db:seed",
     "postinstall": "husky"
   },
   "engines": {

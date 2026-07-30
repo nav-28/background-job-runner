@@ -29,7 +29,6 @@ import {
 import { apiErrorStatus } from '@/lib/api/errors';
 import type { TaskResponse } from '@/lib/api/model';
 import { isTaskQuery } from '@/lib/api/task-queries';
-import { useTaskEvents } from '@/lib/hooks/useTaskEvents';
 import { hasEntries } from '@/lib/utils/format-json';
 import { canCancel, canCollect, canRetry } from '@/lib/utils/task-actions';
 import { handleOwnership, holdsHandle } from '@/lib/utils/task-handle';
@@ -37,8 +36,6 @@ import { handleOwnership, holdsHandle } from '@/lib/utils/task-handle';
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
-
-  useTaskEvents({ enabled: true });
 
   const task = useGetTaskById(id);
   const history = useGetTaskHistoryById(id);
@@ -161,7 +158,7 @@ export default function TaskDetailPage() {
         )}
       </Section>
 
-      {data.status === 'ready' ? (
+      {data.status === 'ready' && data.collected ? (
         <Section title="Result">
           {data.result === null || data.result === undefined ? (
             <Typography variant="body2" color="text.secondary">

@@ -1,14 +1,36 @@
 'use client';
 
+import CloseIcon from '@mui/icons-material/Close';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import TableRowsIcon from '@mui/icons-material/TableRows';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
+import Drawer from '@mui/material/Drawer';
+import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
+import { useTheme } from '@mui/material/styles';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useMemo, useState } from 'react';
+import StatsStrip from '@/components/dashboard/StatsStrip';
+import SubmitTaskDialog from '@/components/dashboard/SubmitTaskDialog';
+import TaskCard from '@/components/dashboard/TaskCard';
+import TaskFilterBar from '@/components/dashboard/TaskFilterBar';
+import TaskTable from '@/components/dashboard/TaskTable';
+import ErrorState from '@/components/ErrorState';
+import { useListLanes, useListTasks, useTaskStats } from '@/lib/api/endpoints/tasks/tasks';
+import type { TaskStatus } from '@/lib/api/model';
+import { useDialog } from '@/lib/ui-hooks/useDialog';
+import { type TaskViewMode, useTaskViewMode } from '@/lib/ui-hooks/useTaskViewMode';
 import {
+  activeFilterCount,
   DEFAULT_FILTERS,
   INITIAL_LIMIT,
   isFiltered,
@@ -16,34 +38,20 @@ import {
   MAX_LIMIT,
   type TaskFilterState,
   toListTasksParams,
-} from '@/components/dashboard/filters';
-import StatsStrip from '@/components/dashboard/StatsStrip';
-import SubmitTaskDialog from '@/components/dashboard/SubmitTaskDialog';
-import TaskCard from '@/components/dashboard/TaskCard';
-import TaskFilterBar from '@/components/dashboard/TaskFilterBar';
-import ErrorState from '@/components/ErrorState';
-import { useListLanes, useListTasks, useTaskStats } from '@/lib/api/endpoints/tasks/tasks';
-import type { TaskStatus } from '@/lib/api/model';
-import { useTaskEvents } from '@/lib/hooks/useTaskEvents';
-import { useDialog } from '@/lib/ui-hooks/useDialog';
-
-/**
- * `EventSource` reconnects on its own, so an `error` means "retrying", never
- * "gave up". The copy has to say so or a transient blip reads as a dead app.
- */
-const STREAM_LABEL: Record<ReturnType<typeof useTaskEvents>['status'], string> = {
-  connecting: 'Connecting…',
-  open: 'Live',
-  error: 'Reconnecting…',
-};
+} from '@/lib/utils/task-filters';
 
 export default function DashboardPage() {
-  const { status: streamStatus } = useTaskEvents({ enabled: true });
-
   const [filters, setFilters] = useState<TaskFilterState>(DEFAULT_FILTERS);
   const [limit, setLimit] = useState(INITIAL_LIMIT);
 
   const submitDialog = useDialog();
+  const filterDrawer = useDialog();
+
+  const theme = useTheme();
+  const viewMode = useTaskViewMode();
+
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'), { noSsr: true });
+  const showTable = viewMode.ready && isDesktop && viewMode.mode === 'table';
 
   const params = useMemo(() => toListTasksParams(filters, limit), [filters, limit]);
 
@@ -64,18 +72,39 @@ export default function DashboardPage() {
   const looksTruncated = rows.length >= limit;
   const atCap = limit >= MAX_LIMIT;
 
+  const filterBar = (
+    <TaskFilterBar filters={filters} lanes={lanes.data ?? []} onChange={applyFilters} />
+  );
+
   return (
     <Stack spacing={3}>
       <Stack direction="row" spacing={2} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
         <Typography variant="h4" component="h1" sx={{ flexGrow: 1 }}>
           Tasks
         </Typography>
-        <Chip
+
+        <ToggleButtonGroup
           size="small"
-          variant="outlined"
-          color={streamStatus === 'open' ? 'success' : 'default'}
-          label={STREAM_LABEL[streamStatus]}
-        />
+          exclusive
+          value={viewMode.mode}
+          onChange={(_event, next: TaskViewMode | null) => {
+            if (next) viewMode.setMode(next);
+          }}
+          aria-label="View"
+          sx={{ display: { xs: 'none', md: 'inline-flex' } }}
+        >
+          <ToggleButton value="cards" aria-label="Card view">
+            <Tooltip title="Cards">
+              <ViewModuleIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="table" aria-label="Table view">
+            <Tooltip title="Table">
+              <TableRowsIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+        </ToggleButtonGroup>
+
         <Button variant="contained" onClick={() => submitDialog.handleOpen()}>
           Submit task
         </Button>
@@ -83,7 +112,19 @@ export default function DashboardPage() {
 
       <StatsStrip stats={stats.data} active={filters.status} onToggle={toggleStatus} />
 
-      <TaskFilterBar filters={filters} lanes={lanes.data ?? []} onChange={applyFilters} />
+      <Box sx={{ display: { xs: 'none', md: 'block' } }}>{filterBar}</Box>
+
+      <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+        <Badge badgeContent={activeFilterCount(filters)} color="primary">
+          <Button
+            variant="outlined"
+            startIcon={<FilterListIcon />}
+            onClick={() => filterDrawer.handleOpen()}
+          >
+            Filters
+          </Button>
+        </Badge>
+      </Box>
 
       {tasks.isError ? (
         <ErrorState error={tasks.error} onRetry={() => void tasks.refetch()} />
@@ -104,6 +145,8 @@ export default function DashboardPage() {
                 : 'No tasks yet. Submit one to watch it move through the engine.'}
             </Typography>
           </Paper>
+        ) : showTable ? (
+          <TaskTable tasks={rows} />
         ) : (
           <Box
             sx={{
@@ -141,6 +184,20 @@ export default function DashboardPage() {
           )}
         </Stack>
       ) : null}
+
+      <Drawer anchor="bottom" open={filterDrawer.open} onClose={filterDrawer.handleClose}>
+        <Box sx={{ p: 2 }}>
+          <Stack direction="row" sx={{ alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" component="p" sx={{ flexGrow: 1 }}>
+              Filters
+            </Typography>
+            <IconButton onClick={filterDrawer.handleClose} aria-label="Close filters">
+              <CloseIcon />
+            </IconButton>
+          </Stack>
+          {filterBar}
+        </Box>
+      </Drawer>
 
       <SubmitTaskDialog
         open={submitDialog.open}

@@ -5,7 +5,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import type { LaneResponse, TaskStatus } from '@/lib/api/model';
-import { DEFAULT_FILTERS, isFiltered, type TaskFilterState } from './filters';
+import { DEFAULT_FILTERS, isFiltered, type TaskFilterState } from '@/lib/utils/task-filters';
 import { TASK_STATUSES } from './status';
 
 interface TaskFilterBarProps {

@@ -3,9 +3,10 @@
 import Button from '@mui/material/Button';
 import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { closeSnackbar, enqueueSnackbar } from '@/components/GlobalSnackbar/store';
 import type { SnackbarMessage, SnackbarOptions } from '@/components/GlobalSnackbar/types';
+import { resetTaskStreamStatus, setTaskStreamStatus } from '@/components/TaskEventStream/store';
 import { apiUrl } from '@/lib/api/config';
 import { isTaskQuery } from '@/lib/api/task-queries';
 
@@ -90,14 +91,8 @@ const INVALIDATE_DEBOUNCE_MS = 250;
  */
 const SKIP_REPLAY_CURSOR = Number.MAX_SAFE_INTEGER;
 
-export type TaskStreamStatus = 'connecting' | 'open' | 'error';
-
 export interface UseTaskEventsOptions {
   enabled?: boolean;
-}
-
-export interface UseTaskEventsResult {
-  status: TaskStreamStatus;
 }
 
 function parseTaskEvent(raw: unknown): TaskEvent | null {
@@ -111,15 +106,14 @@ function parseTaskEvent(raw: unknown): TaskEvent | null {
   }
 }
 
-export function useTaskEvents({ enabled = true }: UseTaskEventsOptions = {}): UseTaskEventsResult {
+export function useTaskEvents({ enabled = true }: UseTaskEventsOptions = {}): void {
   const queryClient = useQueryClient();
-  const [status, setStatus] = useState<TaskStreamStatus>('connecting');
 
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!enabled) {
-      setStatus('connecting');
+      resetTaskStreamStatus();
       return;
     }
     if (typeof EventSource === 'undefined') return;
@@ -142,7 +136,7 @@ export function useTaskEvents({ enabled = true }: UseTaskEventsOptions = {}): Us
     });
 
     const onOpen = () => {
-      setStatus('open');
+      setTaskStreamStatus('open');
 
       // Invalidate queries with a debounce to get the latest state.
       // The server might send data so the debounce helps with that
@@ -151,7 +145,7 @@ export function useTaskEvents({ enabled = true }: UseTaskEventsOptions = {}): Us
 
     const onError = () => {
       // Browser will reconnect on its own
-      setStatus('error');
+      setTaskStreamStatus('error');
     };
 
     const onTaskEvent = (event: MessageEvent<unknown>) => {
@@ -180,12 +174,14 @@ export function useTaskEvents({ enabled = true }: UseTaskEventsOptions = {}): Us
       }
       source.close();
 
+      // Without this a signed-out user keeps a stale "Live" chip: the status
+      // lives in a module store that `queryClient.clear()` does not touch.
+      resetTaskStreamStatus();
+
       if (flushTimer.current !== null) {
         clearTimeout(flushTimer.current);
         flushTimer.current = null;
       }
     };
   }, [enabled, queryClient]);
-
-  return { status };
 }

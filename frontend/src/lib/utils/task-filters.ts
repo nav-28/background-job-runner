@@ -16,14 +16,24 @@ export const LIMIT_STEP = 20;
 /** `GET /tasks` rejects a larger `limit` outright. */
 export const MAX_LIMIT = 100;
 
+/**
+ * What the mobile "Filters" badge shows. Sort counts: it changes which tasks the
+ * first page holds, and counting it keeps the badge and the "Clear filters"
+ * button agreeing about whether anything is set.
+ */
+export function activeFilterCount(filters: TaskFilterState): number {
+  const set = [
+    filters.status !== undefined,
+    filters.lane !== undefined,
+    filters.from !== undefined,
+    filters.to !== undefined,
+    filters.sort !== DEFAULT_FILTERS.sort,
+  ];
+  return set.filter(Boolean).length;
+}
+
 export function isFiltered(filters: TaskFilterState): boolean {
-  return (
-    filters.status !== undefined ||
-    filters.lane !== undefined ||
-    filters.from !== undefined ||
-    filters.to !== undefined ||
-    filters.sort !== DEFAULT_FILTERS.sort
-  );
+  return activeFilterCount(filters) > 0;
 }
 
 /** No timezone suffix, so this resolves in the zone the date input picked the day in. */

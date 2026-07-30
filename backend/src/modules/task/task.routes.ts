@@ -138,7 +138,6 @@ const taskRoutes: FastifyPluginAsyncTypebox = async (app) => {
     {
       config: AUTHENTICATED,
       schema: {
-        // biome-ignore lint/security/noSecrets: an operationId, read as high-entropy by the rule
         operationId: 'getTaskHistoryById',
         description:
           'Every transition this task went through, oldest first. Addressed by id, so it keeps ' +
@@ -311,6 +310,12 @@ const taskRoutes: FastifyPluginAsyncTypebox = async (app) => {
     async (req, res) => {
       const { userId } = requireAuth(req);
       res.sse.keepAlive();
+      res.sse.sendHeaders();
+      // sendHeaders only writes it so we need to flush it so actually send it
+      // heartbeats are sent at an interval but we need to send one right away
+      // so that the browser marks the connection as connected
+      res.raw.write(': heartbeat\n\n');
+      res.raw.flushHeaders();
 
       const cursor = readCursor(res.sse.lastEventId, req.query.since);
       const delivered = new Set<number>();
@@ -345,10 +350,6 @@ const taskRoutes: FastifyPluginAsyncTypebox = async (app) => {
         unsubscribe();
         return;
       }
-
-      res.sse.sendHeaders();
-      // sendHeaders only writes it so we need to flush it so actually send it
-      res.raw.flushHeaders();
 
       for (const event of replayed) {
         delivered.add(event.id);

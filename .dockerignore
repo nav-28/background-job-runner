@@ -1,0 +1,38 @@
+# Both images build from the repo root, because the pnpm lockfile lives here and is keyed by
+# workspace package path — a per-package build context cannot see it.
+
+**/node_modules
+**/.next
+**/coverage
+**/.turbo
+
+.git
+.gitignore
+.github
+.husky
+.claude
+.devcontainer
+
+**/.env
+**/.env.*
+!**/.env.example
+
+**/*.md
+**/*.log
+**/.DS_Store
+**/tsconfig.tsbuildinfo
+
+.vscode
+.idea
+.cursor
+
+# Applied by the `migrate` service, which mounts them rather than baking them in.
+backend/db
+backend/tests
+backend/scripts
+backend/docs
+
+docker-compose.yml
+**/Dockerfile
+.dockerignore
+assesment
