@@ -1,22 +1,5 @@
 import { type Static, type TSchema, Type } from 'typebox';
 
-/**
- * `{ id }` — returned by create endpoints.
- *
- * `title` on a response schema is what the frontend's client generator names its
- * type after, so always set one on anything that crosses the wire.
- */
-export const idResponseSchema = Type.Object(
-  {
-    id: Type.String({
-      format: 'uuid',
-      example: '2cdc8ab1-6d50-49cc-ba14-54e4ac7ec231',
-      description: "Entity's id",
-    }),
-  },
-  { title: 'IdResponse' },
-);
-
 /** Error body sent by src/plugins/error-handler.ts. Registered once as a shared schema. */
 export const apiErrorResponseSchema = Type.Object(
   {

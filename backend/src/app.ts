@@ -92,5 +92,3 @@ export async function buildApp(overrides: FastifyServerOptions = {}, options: Ap
 
   return app;
 }
-
-export type App = Awaited<ReturnType<typeof buildApp>>;

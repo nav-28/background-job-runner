@@ -11,7 +11,7 @@ import type { CreateUserInput, User } from '#src/modules/user/user.types.ts';
  */
 
 /** Email is the login identifier, so it is compared case-insensitively everywhere. */
-export function normalizeEmail(email: string): string {
+function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 

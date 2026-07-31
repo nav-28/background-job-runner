@@ -24,7 +24,7 @@ const DURATION_CAP_MS = 300_000; // 5 mins
  * listener is registered `once` and removed on the happy path so a long-lived signal does not
  * accumulate listeners.
  */
-export function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
+function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal.aborted) {
       reject(new Error('aborted'));
@@ -48,7 +48,7 @@ function pickDuration(raw: unknown): number {
     : Math.floor(MIN_DURATION_MS + Math.random() * (MAX_DURATION_MS - MIN_DURATION_MS));
 }
 
-export const mockHandler: Worker = async (job, ctx) => {
+const mockHandler: Worker = async (job, ctx) => {
   const durationMs = pickDuration(job.params.duration_ms);
   await abortableSleep(durationMs, ctx.signal);
 

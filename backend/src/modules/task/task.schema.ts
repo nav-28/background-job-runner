@@ -5,7 +5,7 @@ import { BadRequestError } from '#src/lib/errors.ts';
 
 const ISO_EXAMPLE = '2026-05-30T18:00:00.000Z';
 
-export const taskStatusSchema = Type.Union(
+const taskStatusSchema = Type.Union(
   [
     Type.Literal('queued'),
     Type.Literal('running'),
@@ -31,7 +31,7 @@ function openObject(description: string) {
   });
 }
 
-export const taskErrorSchema = Type.Object(
+const taskErrorSchema = Type.Object(
   {
     reason: Type.String({
       example: 'simulated failure',
@@ -171,7 +171,7 @@ export const taskStatsResponseSchema = Type.Object(
 );
 
 /** One row of a task's transition log. */
-export const taskEventResponseSchema = Type.Object(
+const taskEventResponseSchema = Type.Object(
   {
     id: Type.Integer({
       example: 42,
@@ -194,7 +194,7 @@ export const taskHistoryResponseSchema = Type.Array(taskEventResponseSchema, {
 });
 
 /** One parameter a lane understands — enough for a UI to render an input for it. */
-export const laneParamResponseSchema = Type.Object(
+const laneParamResponseSchema = Type.Object(
   {
     name: Type.String({ example: 'duration_ms' }),
     type: Type.Union([Type.Literal('number'), Type.Literal('boolean'), Type.Literal('string')]),
@@ -207,7 +207,7 @@ export const laneParamResponseSchema = Type.Object(
   { title: 'LaneParam' },
 );
 
-export const laneResponseSchema = Type.Object(
+const laneResponseSchema = Type.Object(
   {
     lane: Type.String({ example: 'scrape' }),
     kind: Type.String({ example: 'inline', description: 'How the worker is dispatched' }),

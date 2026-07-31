@@ -1,9 +1,7 @@
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 
-export type GuardVerdict =
-  | { ok: true; url: URL }
-  | { ok: false; reason: string; retryable: boolean };
+type GuardVerdict = { ok: true; url: URL } | { ok: false; reason: string; retryable: boolean };
 
 type AddressKind =
   | 'public'

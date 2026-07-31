@@ -19,7 +19,7 @@ import { API_BASE_URL } from '@/lib/api/config';
  * hand-rolls a native `EventSource` hook for it instead. Nothing should import
  * those two symbols.
  */
-export const axiosInstance = axios.create({
+const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   // The session is an HttpOnly cookie set by the backend, which is now a

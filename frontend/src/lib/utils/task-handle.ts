@@ -8,9 +8,9 @@ export function holdsHandle(task: Pick<TaskResponse, 'status' | 'collected'>): b
   return task.status === 'ready' && !task.collected;
 }
 
-export type HandleOwnership = 'owned' | 'reclaimed' | 'unverified';
+type HandleOwnership = 'owned' | 'reclaimed' | 'unverified';
 
-export interface HandleHolderProbe {
+interface HandleHolderProbe {
   /** UUID of the task */
   holderId?: string;
   /** HTTP status when that probe failed. */

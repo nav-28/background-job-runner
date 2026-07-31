@@ -1,4 +1,4 @@
-import { type Static, Type } from 'typebox';
+import { Type } from 'typebox';
 import { userResponseSchema } from '#src/modules/user/user.schema.ts';
 import { AuthKind } from '#src/plugins/auth.ts';
 
@@ -38,7 +38,6 @@ export const signupBodySchema = Type.Object(
   },
   { title: 'SignupRequest' },
 );
-export type SignupBody = Static<typeof signupBodySchema>;
 
 /** POST /api/v1/auth/login body */
 export const loginBodySchema = Type.Object(
@@ -48,7 +47,6 @@ export const loginBodySchema = Type.Object(
   },
   { title: 'LoginRequest' },
 );
-export type LoginBody = Static<typeof loginBodySchema>;
 
 /**
  * Signup and login both set the session cookie *and* return the token in the body.

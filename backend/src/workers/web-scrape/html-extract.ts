@@ -2,7 +2,7 @@
  * Enough of an HTML reader to answer "what is this page", and no more.
  */
 
-export interface PageSummary {
+interface PageSummary {
   title: string | null;
   description: string | null;
   h1: string | null;

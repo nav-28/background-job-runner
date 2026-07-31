@@ -10,7 +10,7 @@ import { resetTaskStreamStatus, setTaskStreamStatus } from '@/components/TaskEve
 import { apiUrl } from '@/lib/api/config';
 import { isTaskQuery } from '@/lib/api/task-queries';
 
-export interface TaskEvent {
+interface TaskEvent {
   id: number;
   task_id: string;
   handle: string;
@@ -91,7 +91,7 @@ const INVALIDATE_DEBOUNCE_MS = 250;
  */
 const SKIP_REPLAY_CURSOR = Number.MAX_SAFE_INTEGER;
 
-export interface UseTaskEventsOptions {
+interface UseTaskEventsOptions {
   enabled?: boolean;
 }
 

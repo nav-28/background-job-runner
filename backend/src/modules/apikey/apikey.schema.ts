@@ -16,11 +16,9 @@ export const createApiKeyBodySchema = Type.Object(
   },
   { title: 'CreateApiKeyRequest' },
 );
-export type CreateApiKeyBody = Static<typeof createApiKeyBodySchema>;
 
 /** GET /api/v1/keys querystring */
 export const listApiKeysQuerySchema = Type.Object({ ...paginationQuerySchema });
-export type ListApiKeysQuery = Static<typeof listApiKeysQuerySchema>;
 
 /** DELETE /api/v1/keys/:id params */
 export const apiKeyIdParamsSchema = Type.Object({
@@ -53,7 +51,7 @@ const apiKeyProperties = {
 };
 
 /** An API key on the wire. Never carries the secret or its hash. */
-export const apiKeyResponseSchema = Type.Object(apiKeyProperties, { title: 'ApiKeyResponse' });
+const apiKeyResponseSchema = Type.Object(apiKeyProperties, { title: 'ApiKeyResponse' });
 export type ApiKeyResponse = Static<typeof apiKeyResponseSchema>;
 
 /**

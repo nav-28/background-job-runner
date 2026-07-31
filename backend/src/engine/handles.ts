@@ -30,7 +30,7 @@ export interface AllocateOptions {
   useLaneLock?: boolean;
 }
 
-export type Allocation = TaskWithEvent;
+type Allocation = TaskWithEvent;
 
 /**
  * Allocates the next free handle for `(userId, lane)` and inserts the task and its `accepted`

@@ -20,9 +20,7 @@ import {
 } from '#src/engine/types.ts';
 import { ConflictError, DatabaseError } from '#src/lib/errors.ts';
 
-export type { NewEvent, TaskGuard, TaskPatch } from '#src/engine/repository.types.ts';
-
-export type Executor = postgres.Sql | postgres.TransactionSql;
+type Executor = postgres.Sql | postgres.TransactionSql;
 
 /** postgres.js types its `json()` helper against `JSONValue`; our payloads are `unknown`. */
 function asJson(value: unknown): postgres.JSONValue {
@@ -32,7 +30,7 @@ function asJson(value: unknown): postgres.JSONValue {
 const UNIQUE_VIOLATION = '23505'; // https://www.postgresql.org/docs/current/errcodes-appendix.html
 const CAUSE_CHAIN_LIMIT = 5;
 
-export function isUniqueViolation(err: unknown): boolean {
+function isUniqueViolation(err: unknown): boolean {
   let current: unknown = err;
   for (let depth = 0; depth < CAUSE_CHAIN_LIMIT && current instanceof Error; depth++) {
     if ('code' in current && current.code === UNIQUE_VIOLATION) {
@@ -69,7 +67,7 @@ async function guarded<T>(what: string, fn: () => Promise<T>): Promise<T> {
  * is not a hypothetical). The advisory lock turns that into one attempt each.
  *
  */
-export async function lockLane(userId: string, lane: string, tx: Executor): Promise<void> {
+async function lockLane(userId: string, lane: string, tx: Executor): Promise<void> {
   await guarded('lock lane', async () => {
     await tx`SELECT pg_advisory_xact_lock(hashtext(${userId}), hashtext(${lane}))`;
   });
@@ -79,7 +77,7 @@ export async function lockLane(userId: string, lane: string, tx: Executor): Prom
 // Writes
 // ---------------------------------------------------------------------------
 
-export interface NewTask {
+interface NewTask {
   id: string;
   userId: string;
   lane: string;
@@ -94,7 +92,7 @@ export interface NewTask {
  * same snapshot, pick the same number, and one loses on the unique index. `lockLane` and the retry
  * loop in `handles.ts` are still what make that rare and recoverable.
  */
-export async function insertAtNextHandle(task: NewTask, tx?: Executor): Promise<TaskRow> {
+async function insertAtNextHandle(task: NewTask, tx?: Executor): Promise<TaskRow> {
   const db = tx ?? getDb();
   return guarded('insert task', async () => {
     const [row] = await db<TaskRow[]>`
@@ -121,7 +119,7 @@ export async function insertAtNextHandle(task: NewTask, tx?: Executor): Promise<
   });
 }
 
-export async function insertEvent(event: NewEvent, tx?: Executor): Promise<TaskEventRow> {
+async function insertEvent(event: NewEvent, tx?: Executor): Promise<TaskEventRow> {
   const db = tx ?? getDb();
   return guarded('insert task event', async () => {
     const [row] = await db<TaskEventRow[]>`
@@ -141,7 +139,7 @@ export async function insertEvent(event: NewEvent, tx?: Executor): Promise<TaskE
  * Applies `patch` to task `id` when every condition in `guard` holds. Returns the updated row, or
  * `null` when the guard did not match — the caller decides whether that is a conflict.
  */
-export async function updateTask(
+async function updateTask(
   id: string,
   patch: TaskPatch,
   guard: TaskGuard = {},
@@ -184,7 +182,7 @@ export async function updateTask(
  * This is the one place other than `transition()` that writes `status`, because acquisition has to
  * be a single atomic statement — the runner writes the matching `started` event immediately after.
  */
-export async function claim(
+async function claim(
   runnerId: string,
   leaseMs: number,
   limit: number,
@@ -213,7 +211,7 @@ export async function claim(
 // Recovery
 // ---------------------------------------------------------------------------
 
-export async function reclaimOrphans(runnerId: string, tx?: Executor): Promise<TaskRow[]> {
+async function reclaimOrphans(runnerId: string, tx?: Executor): Promise<TaskRow[]> {
   const db = tx ?? getDb();
   return guarded('reclaim orphaned tasks', async () => {
     const rows = await db<TaskRow[]>`
@@ -227,10 +225,7 @@ export async function reclaimOrphans(runnerId: string, tx?: Executor): Promise<T
   });
 }
 
-export async function reclaimExpiredLeases(
-  excludeIds: string[],
-  tx?: Executor,
-): Promise<TaskRow[]> {
+async function reclaimExpiredLeases(excludeIds: string[], tx?: Executor): Promise<TaskRow[]> {
   const db = tx ?? getDb();
   return guarded('reclaim expired leases', async () => {
     const rows = await db<TaskRow[]>`
@@ -247,7 +242,7 @@ export async function reclaimExpiredLeases(
 }
 
 /** Pushes the lease out for tasks this runner is still working on. */
-export async function heartbeat(
+async function heartbeat(
   runnerId: string,
   taskIds: string[],
   leaseMs: number,
@@ -272,7 +267,7 @@ export async function heartbeat(
 // Reads
 // ---------------------------------------------------------------------------
 
-export async function findByHandle(
+async function findByHandle(
   userId: string,
   lane: string,
   handleNum: number,
@@ -290,7 +285,7 @@ export async function findByHandle(
   });
 }
 
-export async function findById(userId: string, id: string, tx?: Executor): Promise<TaskRow | null> {
+async function findById(userId: string, id: string, tx?: Executor): Promise<TaskRow | null> {
   const db = tx ?? getDb();
   return guarded('find task by id', async () => {
     const [row] = await db<TaskRow[]>`
@@ -302,7 +297,7 @@ export async function findById(userId: string, id: string, tx?: Executor): Promi
 
 const DEFAULT_LIST_LIMIT = 100;
 
-export async function list(userId: string, filters: TaskFilters = {}): Promise<TaskRow[]> {
+async function list(userId: string, filters: TaskFilters = {}): Promise<TaskRow[]> {
   const db = getDb();
   const where = joinConditions([
     db`"userId" = ${userId}`,
@@ -334,7 +329,7 @@ function mapEvents(rows: readonly TaskEventWithTask[]): TaskEventWithTask[] {
 }
 
 /** Full transition log for one task, oldest first. Ordering by the serial id, not `at`. */
-export async function history(
+async function history(
   userId: string,
   taskId: string,
   tx?: Executor,
@@ -354,7 +349,7 @@ export async function history(
 const DEFAULT_EVENT_LIMIT = 500;
 
 /** Replay window for a client that holds a cursor. `sinceId` is exclusive. */
-export async function eventsSince(
+async function eventsSince(
   userId: string,
   sinceId: number,
   limit = DEFAULT_EVENT_LIMIT,
@@ -374,7 +369,7 @@ export async function eventsSince(
 }
 
 /** Task counts per status for one user. Statuses with no rows are absent — callers fill zeros. */
-export async function statsByStatus(
+async function statsByStatus(
   userId: string,
   tx?: Executor,
 ): Promise<{ status: TaskStatus; count: number }[]> {
