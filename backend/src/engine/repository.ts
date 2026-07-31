@@ -75,29 +75,6 @@ export async function lockLane(userId: string, lane: string, tx: Executor): Prom
   });
 }
 
-/**
- * Lowest free handle number for `(userId, lane)`, filling gaps left by retired tasks.
- *
- * "Active" here is exactly the predicate of `tasks_active_handle_uniq`: queued, running, failed,
- * or ready-but-uncollected. Collected and cancelled tasks release their number for reuse.
- */
-export async function nextHandleNum(userId: string, lane: string, tx?: Executor): Promise<number> {
-  const db = tx ?? getDb();
-  return guarded('find next handle number', async () => {
-    const [row] = await db<{ n: number }[]>`
-      WITH used AS (
-        SELECT "handleNum" AS n FROM tasks
-        WHERE "userId" = ${userId} AND lane = ${lane}
-          AND (status IN ('queued','running','failed') OR (status = 'ready' AND NOT collected))
-      )
-      SELECT COALESCE(MIN(s.n), 1) AS n
-      FROM generate_series(1, (SELECT COALESCE(MAX(n), 0) + 1 FROM used)) AS s(n)
-      WHERE NOT EXISTS (SELECT 1 FROM used WHERE used.n = s.n)
-    `;
-    return row?.n ?? 1;
-  });
-}
-
 // ---------------------------------------------------------------------------
 // Writes
 // ---------------------------------------------------------------------------
@@ -106,20 +83,35 @@ export interface NewTask {
   id: string;
   userId: string;
   lane: string;
-  handleNum: number;
   params: Record<string, unknown>;
   maxAttempts: number;
 }
 
-export async function insertTask(task: NewTask, tx?: Executor): Promise<TaskRow> {
+/**
+ * Picks the lowest free handle number and inserts the task in one statement.
+ *
+ * This does NOT make allocation atomic against other transactions: two concurrent callers read the
+ * same snapshot, pick the same number, and one loses on the unique index. `lockLane` and the retry
+ * loop in `handles.ts` are still what make that rare and recoverable.
+ */
+export async function insertAtNextHandle(task: NewTask, tx?: Executor): Promise<TaskRow> {
   const db = tx ?? getDb();
   return guarded('insert task', async () => {
     const [row] = await db<TaskRow[]>`
-      INSERT INTO tasks (id, "userId", lane, "handleNum", params, status, "maxAttempts")
-      VALUES (
-        ${task.id}, ${task.userId}, ${task.lane}, ${task.handleNum},
-        ${db.json(asJson(task.params))}, 'queued', ${task.maxAttempts}
+      WITH used AS (
+        SELECT "handleNum" AS n FROM tasks
+        WHERE "userId" = ${task.userId} AND lane = ${task.lane}
+          AND (status IN ('queued','running','failed') OR (status = 'ready' AND NOT collected))
+      ), slot AS (
+        SELECT COALESCE(MIN(s.n), 1) AS "handleNum"
+        FROM generate_series(1, (SELECT COALESCE(MAX(n), 0) + 1 FROM used)) AS s(n)
+        WHERE NOT EXISTS (SELECT 1 FROM used WHERE used.n = s.n)
       )
+      INSERT INTO tasks (id, "userId", lane, "handleNum", params, status, "maxAttempts")
+      SELECT
+        ${task.id}::uuid, ${task.userId}::uuid, ${task.lane}, slot."handleNum",
+        ${db.json(asJson(task.params))}::jsonb, 'queued', ${task.maxAttempts}::int
+      FROM slot
       RETURNING *
     `;
     if (!row) {
@@ -410,13 +402,11 @@ async function allocateHandle(input: AllocateHandleInput): Promise<TaskWithEvent
     if (input.useLaneLock !== false) {
       await lockLane(input.userId, input.lane, tx);
     }
-    const handleNum = await nextHandleNum(input.userId, input.lane, tx);
-    const task = await insertTask(
+    const task = await insertAtNextHandle(
       {
         id: randomUUID(),
         userId: input.userId,
         lane: input.lane,
-        handleNum,
         params: input.params,
         maxAttempts: input.maxAttempts,
       },
@@ -427,7 +417,7 @@ async function allocateHandle(input: AllocateHandleInput): Promise<TaskWithEvent
         taskId: task.id,
         userId: input.userId,
         type: TaskEventType.accepted,
-        detail: { summary: `${input.lane}-${handleNum} accepted` },
+        detail: { summary: `${input.lane}-${task.handleNum} accepted` },
       },
       tx,
     );
