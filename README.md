@@ -29,6 +29,12 @@ docker compose up -d --build     # Postgres, migrations, API :3000, UI :3001
 cd backend && pnpm db:seed       # demo account + sample tasks
 ```
 
+Make sure you set you the `.env.local` files correctly for the frontend 
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:3000
+```
+
 Open <http://localhost:3001> and sign in as `demo@example.com` / `password123`.
 
 <details>
