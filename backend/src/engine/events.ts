@@ -10,28 +10,27 @@ import {
 
 export type { EventBus } from '#src/engine/types.ts';
 
-/** The one place `lane-N` is spelled out. */
-export const handleOf = (lane: string, handleNum: number): string => `${lane}-${handleNum}`;
+export function handleOf(lane: string, handleNum: number): string {
+  return `${lane}-${handleNum}`;
+}
 
 /**
  * In-process fan-out, one EventEmitter channel per user id.
  *
- * Events are also durable in `task_events`, so a client that misses a live event can always catch
- * up through `eventsSince()`. The bus is an optimisation over polling, never the source of truth.
  */
 export class InProcessEventBus implements EventBus {
-  readonly #emitter = new EventEmitter();
-  readonly #logger: EngineLogger;
+  private readonly emitter = new EventEmitter();
+  private readonly logger: EngineLogger;
 
   constructor(logger: EngineLogger) {
-    this.#logger = logger;
+    this.logger = logger;
     // One listener per open subscription; the default cap of 10 would warn on an ordinary user
     // with a few browser tabs open.
-    this.#emitter.setMaxListeners(0);
+    this.emitter.setMaxListeners(0);
   }
 
   publish = (event: EngineEvent): void => {
-    this.#emitter.emit(event.user_id, event);
+    this.emitter.emit(event.user_id, event);
   };
 
   subscribe = (userId: string, cb: (e: EngineEvent) => void): (() => void) => {
@@ -42,7 +41,7 @@ export class InProcessEventBus implements EventBus {
       try {
         cb(event);
       } catch (error: unknown) {
-        this.#logger.error(
+        this.logger.error(
           {
             err: error,
             userId,
@@ -54,23 +53,17 @@ export class InProcessEventBus implements EventBus {
         );
       }
     };
-    this.#emitter.on(userId, guarded);
+    this.emitter.on(userId, guarded);
     return () => {
-      this.#emitter.off(userId, guarded);
+      this.emitter.off(userId, guarded);
     };
   };
 }
 
-const asString = (value: unknown, fallback = ''): string =>
-  typeof value === 'string' ? value : fallback;
+function asString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
 
-/**
- * Projects a stored event row onto the wire shape.
- *
- * Going through the stored row rather than building the event at the call site is what makes
- * `eventsSince()` and the live bus produce byte-identical events: a client replaying from a cursor
- * sees exactly what a live subscriber saw.
- */
 export function toEngineEvent(row: TaskEventWithTask): EngineEvent {
   const base: EngineEventBase = {
     id: row.id,

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { ParamDescriptor, WorkerDescriptor, WorkerResult } from '#src/engine/types.ts';
 import { createWorkerRegistry } from '#src/engine/workers/registry.ts';
+import type { ParamDescriptor, WorkerDescriptor, WorkerResult } from '#src/engine/workers/types.ts';
 import { BadRequestError } from '#src/lib/errors.ts';
 
 /**

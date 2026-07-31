@@ -64,10 +64,15 @@ export async function guardUrl(raw: string): Promise<GuardVerdict> {
   return verdictFor(url, addresses);
 }
 
-const blocked = (reason: string): GuardVerdict => ({ ok: false, reason, retryable: false });
+function blocked(reason: string): GuardVerdict {
+  return { ok: false, reason, retryable: false };
+}
 
-const isPrivateName = (hostname: string): boolean =>
-  hostname === 'localhost' || PRIVATE_NAME_SUFFIXES.some((suffix) => hostname.endsWith(suffix));
+function isPrivateName(hostname: string): boolean {
+  return (
+    hostname === 'localhost' || PRIVATE_NAME_SUFFIXES.some((suffix) => hostname.endsWith(suffix))
+  );
+}
 
 /** A host is only reachable if *every* address it resolves to is. One private answer rejects. */
 function verdictFor(url: URL, addresses: string[]): GuardVerdict {

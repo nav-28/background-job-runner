@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import type { Job, Worker, WorkerDescriptor, WorkerResult } from '#src/engine/types.ts';
+import type { Job, Worker, WorkerDescriptor, WorkerResult } from '#src/engine/workers/types.ts';
 import { extractPage } from '#src/workers/web-scrape/html-extract.ts';
 import { guardUrl } from '#src/workers/web-scrape/url-guard.ts';
 
@@ -17,7 +17,9 @@ interface Failure {
   retryable: boolean;
 }
 
-const failed = (error: Failure): WorkerResult => ({ status: 'failed', error });
+function failed(error: Failure): WorkerResult {
+  return { status: 'failed', error };
+}
 
 /**
  * `retryable` is a claim about the nature of the error, and both mistakes cost something:
@@ -170,8 +172,9 @@ async function follow(target: string, signal: AbortSignal): Promise<Hop | Failur
   return { reason: `More than ${MAX_REDIRECTS} redirects`, retryable: false };
 }
 
-const isRedirect = (status: number): boolean =>
-  status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+function isRedirect(status: number): boolean {
+  return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
 
 function rejectResponse(response: Response): Failure | null {
   const { status } = response;

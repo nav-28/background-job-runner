@@ -1,45 +1,37 @@
+import { randomUUID } from 'node:crypto';
 import type postgres from 'postgres';
-import { getDb, joinConditions } from '#src/db.ts';
+import { getDb, joinConditions, withTransaction } from '#src/db.ts';
 import type {
-  TaskError,
-  TaskEventRow,
+  AllocateHandleInput,
+  NewEvent,
+  TaskGuard,
+  TaskPatch,
+  TaskRepository,
+  TaskWithEvent,
+  TransitionInput,
+} from '#src/engine/repository.types.ts';
+import {
+  type TaskEventRow,
   TaskEventType,
-  TaskEventWithTask,
-  TaskFilters,
-  TaskRow,
-  TaskStatus,
+  type TaskEventWithTask,
+  type TaskFilters,
+  type TaskRow,
+  type TaskStatus,
 } from '#src/engine/types.ts';
 import { ConflictError, DatabaseError } from '#src/lib/errors.ts';
 
-/**
- * Every statement the engine issues. No business rules live here — this file decides how to talk
- * to Postgres, never when.
- *
- * Functions that can participate in a caller's transaction take an optional `tx`. Passing it is
- * what makes "write the task row and its event atomically" possible; omitting it runs on the pool.
- */
+export type { NewEvent, TaskGuard, TaskPatch } from '#src/engine/repository.types.ts';
 
-/**
- * Accepts either the pooled handle or a transaction handle. postgres.js does not make
- * `TransactionSql` a structural subtype of `Sql` (it drops `END`, `CLOSE` and friends), so this
- * has to be a union rather than the more obvious single type.
- */
 export type Executor = postgres.Sql | postgres.TransactionSql;
 
 /** postgres.js types its `json()` helper against `JSONValue`; our payloads are `unknown`. */
-const asJson = (value: unknown): postgres.JSONValue => value as postgres.JSONValue;
+function asJson(value: unknown): postgres.JSONValue {
+  return value as postgres.JSONValue;
+}
 
 const UNIQUE_VIOLATION = '23505'; // https://www.postgresql.org/docs/current/errcodes-appendix.html
 const CAUSE_CHAIN_LIMIT = 5;
 
-/**
- * True when `err` — or anything it wraps — is a Postgres unique-constraint violation.
- *
- * House rules say a repository must never leak a driver error, so the functions below translate
- * `23505` into `ConflictError`. But `handles.ts` genuinely needs to tell a lost handle race apart
- * from any other conflict in order to retry, so we expose the predicate instead of swallowing the
- * distinction. It walks `cause` because the translation preserves the original error there.
- */
 export function isUniqueViolation(err: unknown): boolean {
   let current: unknown = err;
   for (let depth = 0; depth < CAUSE_CHAIN_LIMIT && current instanceof Error; depth++) {
@@ -51,7 +43,6 @@ export function isUniqueViolation(err: unknown): boolean {
   return false;
 }
 
-/** Runs a query, translating driver errors at this boundary so callers only see `AppError`s. */
 async function guarded<T>(what: string, fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
@@ -77,11 +68,6 @@ async function guarded<T>(what: string, fn: () => Promise<T>): Promise<T> {
  * spec's bound of 5 is blown by ~10 concurrent submits (postgres.js pools 10 connections, so that
  * is not a hypothetical). The advisory lock turns that into one attempt each.
  *
- * It is an optimisation, not the invariant: `tasks_active_handle_uniq` is still the thing that
- * makes a collision impossible, and the retry loop in `handles.ts` is still the recovery path.
- * Two different `(user, lane)` pairs whose hashes collide merely queue behind each other, which
- * costs a little throughput and nothing else. The lock is released automatically on commit or
- * rollback because it is an *xact* lock — nothing to leak.
  */
 export async function lockLane(userId: string, lane: string, tx: Executor): Promise<void> {
   await guarded('lock lane', async () => {
@@ -143,13 +129,6 @@ export async function insertTask(task: NewTask, tx?: Executor): Promise<TaskRow>
   });
 }
 
-export interface NewEvent {
-  taskId: string;
-  userId: string;
-  type: TaskEventType;
-  detail?: Record<string, unknown>;
-}
-
 export async function insertEvent(event: NewEvent, tx?: Executor): Promise<TaskEventRow> {
   const db = tx ?? getDb();
   return guarded('insert task event', async () => {
@@ -164,32 +143,6 @@ export async function insertEvent(event: NewEvent, tx?: Executor): Promise<TaskE
     // bigserial arrives as a string from the driver; the engine treats event ids as cursors.
     return { ...row, id: Number(row.id) };
   });
-}
-
-/** Columns `updateTask` is allowed to write. `status` transitions belong to the runner. */
-export interface TaskPatch {
-  status?: TaskStatus;
-  result?: unknown;
-  error?: TaskError | null;
-  attempts?: number;
-  maxAttempts?: number;
-  runAfter?: Date;
-  leaseUntil?: Date | null;
-  runnerId?: string | null;
-  collected?: boolean;
-  collectedAt?: Date | null;
-}
-
-/**
- * Preconditions the row must still satisfy for the patch to apply. This is what makes the whole
- * engine race-free without a single application-level lock: "cancel it only if it is still
- * queued" is one statement, and losing the race simply matches zero rows.
- */
-export interface TaskGuard {
-  userId?: string;
-  status?: TaskStatus | TaskStatus[];
-  runnerId?: string;
-  collected?: boolean;
 }
 
 /**
@@ -268,19 +221,6 @@ export async function claim(
 // Recovery
 // ---------------------------------------------------------------------------
 
-/**
- * Boot sweep: everything still marked `running` that this process does not own is, by definition,
- * the residue of a runner that died — nobody is heartbeating it. Put it back on the queue.
- *
- * `runnerId IS DISTINCT FROM` is what keeps this honest: at boot our own id owns nothing, so the
- * clause is a no-op then, but it means the sweep can never yank a row out from under this process.
- *
- * KNOWN LIMITATION: with several runner processes alive at once, a *new* process booting would
- * requeue the live work of its peers, which are still heartbeating it. Correct for the
- * single-process deployment this engine targets; the multi-process fix is to skip this sweep
- * entirely and rely on `reclaimExpiredLeases`, at the cost of waiting one lease after a crash.
- * That is what `EngineConfig.bootSweep: false` does — the runner then never calls this.
- */
 export async function reclaimOrphans(runnerId: string, tx?: Executor): Promise<TaskRow[]> {
   const db = tx ?? getDb();
   return guarded('reclaim orphaned tasks', async () => {
@@ -295,13 +235,6 @@ export async function reclaimOrphans(runnerId: string, tx?: Executor): Promise<T
   });
 }
 
-/**
- * Steady-state recovery: a `running` row whose lease lapsed has no live owner, so requeue it.
- *
- * `excludeIds` is the set this process currently has in flight. They are heartbeated, so their
- * lease should never lapse — but if the event loop stalls past a lease, reclaiming our own
- * in-flight row would run it twice concurrently. Cheap belt and braces.
- */
 export async function reclaimExpiredLeases(
   excludeIds: string[],
   tx?: Executor,
@@ -347,15 +280,6 @@ export async function heartbeat(
 // Reads
 // ---------------------------------------------------------------------------
 
-/**
- * Resolves `lane-N` to a row.
- *
- * There can be many historical rows for one `(userId, lane, handleNum)` triple, because a number
- * is recycled once its task is collected or cancelled. Only one of them can be active at a time —
- * a new `scrape-1` cannot be allocated while another `scrape-1` is active, that is precisely what
- * the partial unique index enforces. So the newest row for the triple is the active one whenever
- * any is active, and is the most useful answer when none is. Hence `ORDER BY "createdAt" DESC`.
- */
 export async function findByHandle(
   userId: string,
   lane: string,
@@ -413,8 +337,9 @@ export async function list(userId: string, filters: TaskFilters = {}): Promise<T
   });
 }
 
-const mapEvents = (rows: readonly TaskEventWithTask[]): TaskEventWithTask[] =>
-  rows.map((row) => ({ ...row, id: Number(row.id) }));
+function mapEvents(rows: readonly TaskEventWithTask[]): TaskEventWithTask[] {
+  return rows.map((row) => ({ ...row, id: Number(row.id) }));
+}
 
 /** Full transition log for one task, oldest first. Ordering by the serial id, not `at`. */
 export async function history(
@@ -471,3 +396,111 @@ export async function statsByStatus(
     return [...rows];
   });
 }
+
+// ---------------------------------------------------------------------------
+// Operations
+// ---------------------------------------------------------------------------
+//
+// The functions above are statements; the ones below are the units of work `TaskRepository`
+// promises. Each owns its transaction, so `withTransaction` and every `Executor` stay in this file.
+
+/** One attempt at the allocation. The retry loop that recovers a lost race lives in `handles.ts`. */
+async function allocateHandle(input: AllocateHandleInput): Promise<TaskWithEvent> {
+  return withTransaction(async (tx) => {
+    if (input.useLaneLock !== false) {
+      await lockLane(input.userId, input.lane, tx);
+    }
+    const handleNum = await nextHandleNum(input.userId, input.lane, tx);
+    const task = await insertTask(
+      {
+        id: randomUUID(),
+        userId: input.userId,
+        lane: input.lane,
+        handleNum,
+        params: input.params,
+        maxAttempts: input.maxAttempts,
+      },
+      tx,
+    );
+    const event = await insertEvent(
+      {
+        taskId: task.id,
+        userId: input.userId,
+        type: TaskEventType.accepted,
+        detail: { summary: `${input.lane}-${handleNum} accepted` },
+      },
+      tx,
+    );
+    return { task, event };
+  });
+}
+
+async function transition(input: TransitionInput): Promise<TaskWithEvent | null> {
+  return withTransaction(async (tx) => {
+    const task = await updateTask(input.taskId, input.patch, input.guard, tx);
+    if (!task) {
+      return null;
+    }
+    const event = await insertEvent(
+      {
+        taskId: task.id,
+        userId: task.userId,
+        type: input.type,
+        detail: input.detail ?? {},
+      },
+      tx,
+    );
+    return { task, event };
+  });
+}
+
+/**
+ * Requeues a set of rows and records each one, in a single transaction so a crash mid-sweep cannot
+ * leave a requeued row without its event.
+ */
+async function sweep(
+  reclaim: (tx: Executor) => Promise<TaskRow[]>,
+  runnerId: string,
+  type: TaskEventType,
+): Promise<TaskWithEvent[]> {
+  return withTransaction(async (tx) => {
+    const rows = await reclaim(tx);
+    const out: TaskWithEvent[] = [];
+    for (const task of rows) {
+      const event = await insertEvent(
+        {
+          taskId: task.id,
+          userId: task.userId,
+          type,
+          detail: { attempts: task.attempts, reclaimedBy: runnerId },
+        },
+        tx,
+      );
+      out.push({ task, event });
+    }
+    return out;
+  });
+}
+
+/**
+ * The Postgres store. `createEngine()` defaults `EngineConfig.repository` to this; nothing else
+ * needs to name it.
+ */
+export const postgresTaskRepository: TaskRepository = {
+  allocateHandle,
+  isHandleConflict: isUniqueViolation,
+  transition,
+  claim: (runnerId, leaseMs, limit) => claim(runnerId, leaseMs, limit),
+  heartbeat: (runnerId, taskIds, leaseMs) => heartbeat(runnerId, taskIds, leaseMs),
+  recordEvent: (event) => insertEvent(event),
+  requeueOrphans: (runnerId) =>
+    sweep((tx) => reclaimOrphans(runnerId, tx), runnerId, TaskEventType.requeued_on_restart),
+  requeueExpiredLeases: (runnerId, excludeIds) =>
+    sweep((tx) => reclaimExpiredLeases(excludeIds, tx), runnerId, TaskEventType.lease_expired),
+  findByHandle: (userId, lane, handleNum) => findByHandle(userId, lane, handleNum),
+  findById: (userId, id) => findById(userId, id),
+  list,
+  history: (userId, taskId) => history(userId, taskId),
+  eventsSince: (userId, sinceId, limit) => eventsSince(userId, sinceId, limit),
+  statsByStatus: (userId) => statsByStatus(userId),
+};

@@ -1,7 +1,4 @@
-import { randomUUID } from 'node:crypto';
-import { withTransaction } from '#src/db.ts';
-import * as repo from '#src/engine/repository.ts';
-import { type TaskEventRow, TaskEventType, type TaskRow } from '#src/engine/types.ts';
+import type { TaskRepository, TaskWithEvent } from '#src/engine/repository.types.ts';
 import { ConflictError } from '#src/lib/errors.ts';
 
 /**
@@ -33,10 +30,7 @@ export interface AllocateOptions {
   useLaneLock?: boolean;
 }
 
-export interface Allocation {
-  task: TaskRow;
-  event: TaskEventRow;
-}
+export type Allocation = TaskWithEvent;
 
 /**
  * Allocates the next free handle for `(userId, lane)` and inserts the task and its `accepted`
@@ -55,6 +49,7 @@ export interface Allocation {
  * Nothing is published here — the caller publishes `accepted` after the transaction commits.
  */
 export async function allocateHandleAndInsert(
+  repository: TaskRepository,
   userId: string,
   lane: string,
   params: Record<string, unknown>,
@@ -64,9 +59,15 @@ export async function allocateHandleAndInsert(
 
   for (let attempt = 1; attempt <= MAX_ALLOCATION_ATTEMPTS; attempt++) {
     try {
-      return await allocateOnce(userId, lane, params, opts);
+      return await repository.allocateHandle({
+        userId,
+        lane,
+        params,
+        maxAttempts: opts.maxAttempts,
+        useLaneLock: opts.useLaneLock,
+      });
     } catch (error: unknown) {
-      if (!repo.isUniqueViolation(error)) {
+      if (!repository.isHandleConflict(error)) {
         throw error;
       }
       lastError = error;
@@ -77,32 +78,4 @@ export async function allocateHandleAndInsert(
     `Could not allocate a handle on lane "${lane}" after ${MAX_ALLOCATION_ATTEMPTS} attempts`,
     lastError instanceof Error ? lastError : undefined,
   );
-}
-
-async function allocateOnce(
-  userId: string,
-  lane: string,
-  params: Record<string, unknown>,
-  opts: AllocateOptions,
-): Promise<Allocation> {
-  return withTransaction(async (tx) => {
-    if (opts.useLaneLock !== false) {
-      await repo.lockLane(userId, lane, tx);
-    }
-    const handleNum = await repo.nextHandleNum(userId, lane, tx);
-    const task = await repo.insertTask(
-      { id: randomUUID(), userId, lane, handleNum, params, maxAttempts: opts.maxAttempts },
-      tx,
-    );
-    const event = await repo.insertEvent(
-      {
-        taskId: task.id,
-        userId,
-        type: TaskEventType.accepted,
-        detail: { summary: `${lane}-${handleNum} accepted` },
-      },
-      tx,
-    );
-    return { task, event };
-  });
 }

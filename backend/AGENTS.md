@@ -59,9 +59,18 @@ task lifecycle state machine.
   safely discarded on restart.
 - The `Engine` interface in `src/engine/types.ts` **is** the public surface. `OrchestrationEngine`
   implements it; `createEngine(config)` is the wiring helper that resolves defaults and returns
-  one. Nothing outside `src/engine/` imports any other file in there.
+  one. Nothing outside `src/engine/` imports any other file in there, apart from
+  `src/engine/workers/types.ts` — a worker author needs `Worker`, `Job`, `WorkerResult` and
+  `WorkerDescriptor`, and those live next to the registry that consumes them rather than in
+  `types.ts`. The dependency is one-way: worker types import nothing from `types.ts`.
 - The engine knows no lanes. Workers are injected by whoever constructs it — the Fastify plugin in
   production, the test itself in tests. Adding a worker is one entry in one array.
+- Persistence is behind `TaskRepository` (`src/engine/repository.types.ts`). `EngineConfig.repository`
+  defaults to `postgresTaskRepository` in `createEngine()`, and that is the only place the Postgres
+  implementation is named. **`withTransaction`, the raw SQL and `#src/db.ts` stay inside
+  `src/engine/repository.ts`** — one interface method per *operation*, never per query, so a
+  transaction boundary never reaches a caller. It is a seam, not portability: the contract is still
+  shaped by `FOR UPDATE SKIP LOCKED` claiming and guarded conditional updates.
 
 The route → service → repository rule above applies to `src/modules/*`, not here.
 
@@ -129,7 +138,16 @@ bcrypt: the production image installs `--prod --ignore-scripts` on Alpine and ca
   documentation of its surface. Never derive a public type from an implementation with
   `ReturnType<typeof …>`
 - Public methods that may be detached (passed as callbacks, destructured, handed to a route) are
-  arrow-function properties. Internal helpers are ordinary private methods
+  arrow-function properties. Internal helpers are ordinary `private` methods
+- Privacy is the TypeScript `private` keyword, not `#`. Node's type stripping **erases `private`
+  entirely**, so there is no runtime privacy — a `private` field is an ordinary enumerable property
+  and `Object.keys()` will show it. That is accepted: the keyword documents intent and the compiler
+  enforces it at the only boundary that matters here
+- **Never write a constructor parameter property.** `constructor(private readonly dep: Dep)` is a
+  `SyntaxError` under type stripping (`ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`) — it is a TS feature that
+  emits code rather than erasing. Declare the field, then assign it in the constructor body
+- Standalone named functions are `function foo() {}`, not `const foo = () => {}`. Arrows stay where
+  they are arguments, callbacks, values in a data structure, or where lexical `this` matters
 - No `any` — `noExplicitAny` is an error (relaxed in tests)
 - No `console` — use `fastify.log` / the injected logger
 

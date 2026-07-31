@@ -18,7 +18,9 @@ import { relativeTime } from '@/lib/utils/relative-time';
 import { STATUS_COLOR } from './status';
 
 /** Addressed by uuid: handles are recycled and resolve to whoever holds the number now. */
-const taskHref = (task: TaskResponse) => `/dashboard/${task.id}`;
+function taskHref(task: TaskResponse) {
+  return `/dashboard/${task.id}`;
+}
 
 export default function TaskTable({ tasks }: { tasks: TaskResponse[] }) {
   const router = useRouter();

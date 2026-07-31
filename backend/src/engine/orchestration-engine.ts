@@ -1,13 +1,12 @@
 import { handleOf, toEngineEvent } from '#src/engine/events.ts';
 import { allocateHandleAndInsert } from '#src/engine/handles.ts';
-import * as repo from '#src/engine/repository.ts';
+import type { TaskRepository } from '#src/engine/repository.types.ts';
 import type { TaskRunner } from '#src/engine/runner.ts';
 import {
   type Engine,
   type EngineConfig,
   type EngineEvent,
   type EventBus,
-  type LaneInfo,
   type StopOptions,
   type Task,
   TaskEventType,
@@ -17,6 +16,7 @@ import {
   TaskStatus,
 } from '#src/engine/types.ts';
 import type { WorkerRegistry } from '#src/engine/workers/registry.ts';
+import type { LaneInfo } from '#src/engine/workers/types.ts';
 import { BadRequestError, ConflictError, NotFoundError } from '#src/lib/errors.ts';
 
 /**
@@ -25,15 +25,23 @@ import { BadRequestError, ConflictError, NotFoundError } from '#src/lib/errors.t
  */
 export class OrchestrationEngine implements Engine {
   readonly config: EngineConfig;
-  readonly #registry: WorkerRegistry;
-  readonly #runner: TaskRunner;
-  readonly #bus: EventBus;
+  private readonly registry: WorkerRegistry;
+  private readonly runner: TaskRunner;
+  private readonly bus: EventBus;
+  private readonly repository: TaskRepository;
 
-  constructor(config: EngineConfig, registry: WorkerRegistry, runner: TaskRunner, bus: EventBus) {
+  constructor(
+    config: EngineConfig,
+    registry: WorkerRegistry,
+    runner: TaskRunner,
+    bus: EventBus,
+    repository: TaskRepository,
+  ) {
     this.config = config;
-    this.#registry = registry;
-    this.#runner = runner;
-    this.#bus = bus;
+    this.registry = registry;
+    this.runner = runner;
+    this.bus = bus;
+    this.repository = repository;
   }
 
   submit = async (
@@ -41,21 +49,25 @@ export class OrchestrationEngine implements Engine {
     lane: string,
     params: Record<string, unknown> = {},
   ): Promise<Task> => {
-    const normalised = this.#registry.validateParams(lane, params);
-    const { task, event } = await allocateHandleAndInsert(userId, lane, normalised, {
-      maxAttempts: this.config.maxAttempts,
-    });
+    const normalised = this.registry.validateParams(lane, params);
+    const { task, event } = await allocateHandleAndInsert(
+      this.repository,
+      userId,
+      lane,
+      normalised,
+      { maxAttempts: this.config.maxAttempts },
+    );
     // After the allocation transaction has committed, never before.
-    this.#bus.publish(toEngineEvent({ ...event, lane: task.lane, handleNum: task.handleNum }));
+    this.bus.publish(toEngineEvent({ ...event, lane: task.lane, handleNum: task.handleNum }));
     return toTask(task);
   };
 
   get = async (userId: string, handle: string): Promise<Task> => {
-    return toTask(await this.#find(userId, handle));
+    return toTask(await this.find(userId, handle));
   };
 
   getById = async (userId: string, id: string): Promise<Task> => {
-    const row = await repo.findById(userId, id);
+    const row = await this.repository.findById(userId, id);
     if (!row) {
       throw new NotFoundError(`No task with id "${id}"`);
     }
@@ -63,17 +75,17 @@ export class OrchestrationEngine implements Engine {
   };
 
   list = async (userId: string, filters: TaskFilters = {}): Promise<Task[]> => {
-    return (await repo.list(userId, filters)).map(toTask);
+    return (await this.repository.list(userId, filters)).map(toTask);
   };
 
   history = async (userId: string, handle: string): Promise<TaskEventWithTask[]> => {
-    const task = await this.#find(userId, handle);
-    return repo.history(userId, task.id);
+    const task = await this.find(userId, handle);
+    return this.repository.history(userId, task.id);
   };
 
   historyById = async (userId: string, id: string): Promise<TaskEventWithTask[]> => {
     const task = await this.getById(userId, id);
-    return repo.history(userId, task.id);
+    return this.repository.history(userId, task.id);
   };
 
   /**
@@ -81,8 +93,8 @@ export class OrchestrationEngine implements Engine {
    * why it is an explicit step and not implied by `ready`.
    */
   collect = async (userId: string, handle: string): Promise<Task> => {
-    const task = await this.#find(userId, handle);
-    const updated = await this.#runner.transition({
+    const task = await this.find(userId, handle);
+    const updated = await this.runner.transition({
       taskId: task.id,
       patch: { collected: true, collectedAt: new Date() },
       guard: { userId, status: TaskStatus.ready, collected: false },
@@ -106,7 +118,7 @@ export class OrchestrationEngine implements Engine {
    *
    *  1. `queued` — we beat the claim loop to it; nothing is running, nothing to abort.
    *  2. `running` — write the terminal state FIRST, then abort. The other order lets the worker
-   *     reject, reach `#runOne`'s error path before the update lands, and overwrite `cancelled`
+   *     reject, reach `runOne`'s error path before the update lands, and overwrite `cancelled`
    *     with `failed`.
    *  3. `failed` — The spec recycles a handle number on collect or cancel only, so without this a failed
    *     task holds `scrape-3` forever and there is no way to ever get that number back. Cancel
@@ -115,11 +127,11 @@ export class OrchestrationEngine implements Engine {
    * If none matched, the task finished in the gap between the read and the write.
    */
   cancel = async (userId: string, handle: string): Promise<Task> => {
-    const task = await this.#find(userId, handle);
+    const task = await this.find(userId, handle);
     const cancellable = [TaskStatus.queued, TaskStatus.running, TaskStatus.failed] as const;
 
     for (const from of cancellable) {
-      const updated = await this.#runner.transition({
+      const updated = await this.runner.transition({
         taskId: task.id,
         patch: {
           status: TaskStatus.cancelled,
@@ -132,13 +144,13 @@ export class OrchestrationEngine implements Engine {
       });
       if (updated) {
         if (from === TaskStatus.running) {
-          this.#runner.abort(task.id);
+          this.runner.abort(task.id);
         }
         return toTask(updated);
       }
     }
 
-    const current = await repo.findById(userId, task.id);
+    const current = await this.repository.findById(userId, task.id);
     throw new ConflictError(
       `Task "${handle}" is ${current?.status ?? 'gone'} and can no longer be cancelled`,
     );
@@ -153,9 +165,9 @@ export class OrchestrationEngine implements Engine {
    * retry gets a full fresh allowance while the displayed history stays honest.
    */
   retry = async (userId: string, handle: string): Promise<Task> => {
-    const task = await this.#find(userId, handle);
+    const task = await this.find(userId, handle);
     const maxAttempts = task.attempts + this.config.maxAttempts;
-    const updated = await this.#runner.transition({
+    const updated = await this.runner.transition({
       taskId: task.id,
       patch: {
         status: TaskStatus.queued,
@@ -178,10 +190,10 @@ export class OrchestrationEngine implements Engine {
     return toTask(updated);
   };
 
-  lanes = (): LaneInfo[] => this.#registry.list();
+  lanes = (): LaneInfo[] => this.registry.list();
 
   stats = async (userId: string): Promise<Record<TaskStatus, number>> => {
-    const rows = await repo.statsByStatus(userId);
+    const rows = await this.repository.statsByStatus(userId);
     const zeroed = Object.fromEntries(
       Object.values(TaskStatus).map((status) => [status, 0]),
     ) as Record<TaskStatus, number>;
@@ -192,19 +204,19 @@ export class OrchestrationEngine implements Engine {
   };
 
   subscribe = (userId: string, cb: (e: EngineEvent) => void): (() => void) =>
-    this.#bus.subscribe(userId, cb);
+    this.bus.subscribe(userId, cb);
 
   eventsSince = async (userId: string, sinceId: number, limit?: number): Promise<EngineEvent[]> => {
-    return (await repo.eventsSince(userId, sinceId, limit)).map(toEngineEvent);
+    return (await this.repository.eventsSince(userId, sinceId, limit)).map(toEngineEvent);
   };
 
-  start = (): Promise<void> => this.#runner.start();
+  start = (): Promise<void> => this.runner.start();
 
-  stop = (opts?: StopOptions): Promise<void> => this.#runner.stop(opts);
+  stop = (opts?: StopOptions): Promise<void> => this.runner.stop(opts);
 
-  async #find(userId: string, handle: string): Promise<TaskRow> {
+  private async find(userId: string, handle: string): Promise<TaskRow> {
     const { lane, handleNum } = parseHandle(handle);
-    const row = await repo.findByHandle(userId, lane, handleNum);
+    const row = await this.repository.findByHandle(userId, lane, handleNum);
     if (!row) {
       throw new NotFoundError(`No task with handle "${handle}"`);
     }
@@ -213,10 +225,12 @@ export class OrchestrationEngine implements Engine {
 }
 
 /** Derives `handle` from the row. It is never stored — two columns cannot disagree. */
-const toTask = (row: TaskRow): Task => ({
-  ...row,
-  handle: handleOf(row.lane, row.handleNum),
-});
+function toTask(row: TaskRow): Task {
+  return {
+    ...row,
+    handle: handleOf(row.lane, row.handleNum),
+  };
+}
 
 /**
  * Splits `lane-N`. The last hyphen wins, so a lane name may itself contain hyphens

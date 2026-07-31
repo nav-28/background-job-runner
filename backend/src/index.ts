@@ -9,11 +9,11 @@ app.addHook('onClose', async (instance) => {
   await closeDb();
 });
 
-const shutDown = async (signal: string) => {
+async function shutDown(signal: string) {
   app.log.info(`Received ${signal}, shutting down gracefully…`);
   await app.close();
   process.exit(0);
-};
+}
 process.on('SIGTERM', () => shutDown('SIGTERM'));
 process.on('SIGINT', () => shutDown('SIGINT'));
 

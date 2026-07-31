@@ -67,13 +67,13 @@ axiosInstance.interceptors.response.use(
   },
 );
 
-export const customInstance = async <T>(
+export async function customInstance<T>(
   config: AxiosRequestConfig,
   options?: AxiosRequestConfig,
-): Promise<T> => {
+): Promise<T> {
   const { data } = await axiosInstance({ ...config, ...options });
   return data;
-};
+}
 
 // Types Orval references for error/body generics.
 export type ErrorType<Error> = AxiosError<Error>;

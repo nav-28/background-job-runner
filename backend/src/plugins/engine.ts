@@ -2,7 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
 import env from '#src/config/env.ts';
 import { createEngine } from '#src/engine/index.ts';
-import type { Engine, EngineOptions, WorkerDescriptor } from '#src/engine/types.ts';
+import type { Engine, EngineOptions } from '#src/engine/types.ts';
+import type { WorkerDescriptor } from '#src/engine/workers/types.ts';
 import { mockWorkers } from '#src/workers/mock-worker.ts';
 import { createScrapeWorker } from '#src/workers/web-scrape/index.ts';
 

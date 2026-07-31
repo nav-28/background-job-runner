@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { InProcessEventBus } from '#src/engine/events.ts';
 import { OrchestrationEngine } from '#src/engine/orchestration-engine.ts';
+import { postgresTaskRepository } from '#src/engine/repository.ts';
 import { TaskRunner } from '#src/engine/runner.ts';
 import type { Engine, EngineConfig, EngineLogger, EngineOptions } from '#src/engine/types.ts';
 import { createWorkerRegistry } from '#src/engine/workers/registry.ts';
@@ -40,8 +41,9 @@ const SILENT_LOGGER: EngineLogger = { debug: noop, info: noop, warn: noop, error
  *
  * `workers` has no default on purpose. Lanes are domain content: an engine that shipped with a
  * `scrape` lane baked in would know something about its consumers, and adding a worker would stop
- * being one entry in one array. The numeric knobs and the bus do default — they are implementation
- * detail with one obviously right answer.
+ * being one entry in one array. The numeric knobs, the bus and the repository do default — they are
+ * implementation detail with one obviously right answer. `postgresTaskRepository` is named here and
+ * nowhere else, which is what makes the store swappable.
  *
  * Config is passed in, never read from the environment. `src/config/env.ts` is deliberately not
  * imported: an engine that reads the process environment cannot be instantiated twice with
@@ -58,10 +60,11 @@ export function createEngine(options: EngineOptions): Engine {
     ...options,
     logger,
     bus: options.bus ?? new InProcessEventBus(logger),
+    repository: options.repository ?? postgresTaskRepository,
   };
 
   const registry = createWorkerRegistry(config.workers);
-  const runner = new TaskRunner(config, registry);
+  const runner = new TaskRunner(config, registry, config.repository);
 
-  return new OrchestrationEngine(config, registry, runner, config.bus);
+  return new OrchestrationEngine(config, registry, runner, config.bus, config.repository);
 }

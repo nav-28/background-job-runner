@@ -1,5 +1,6 @@
 import { type Static, Type } from 'typebox';
-import type { LaneInfo, Task, TaskEventWithTask } from '#src/engine/types.ts';
+import type { Task, TaskEventWithTask } from '#src/engine/types.ts';
+import type { LaneInfo } from '#src/engine/workers/types.ts';
 import { BadRequestError } from '#src/lib/errors.ts';
 
 const ISO_EXAMPLE = '2026-05-30T18:00:00.000Z';
@@ -22,12 +23,13 @@ export const taskStatusSchema = Type.Union(
  * Schema is identical, but `Static<>` becomes `Record<string, unknown>` instead of `{}`, which is
  * what the engine's `submit(userId, lane, params)` takes.
  */
-const openObject = (description: string) =>
-  Type.Unsafe<Record<string, unknown>>({
+function openObject(description: string) {
+  return Type.Unsafe<Record<string, unknown>>({
     type: 'object',
     additionalProperties: true,
     description,
   });
+}
 
 export const taskErrorSchema = Type.Object(
   {

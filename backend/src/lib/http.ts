@@ -57,8 +57,8 @@ export const paginationQuerySchema = {
 };
 
 /** Wraps an item schema in the standard `{ count, limit, page, data }` envelope. */
-export const paginatedResponseSchema = <T extends TSchema>(item: T, title: string) =>
-  Type.Object(
+export function paginatedResponseSchema<T extends TSchema>(item: T, title: string) {
+  return Type.Object(
     {
       count: Type.Number({ example: 5, description: 'Total number of items' }),
       limit: Type.Number({ example: 10, description: 'Number of items per page' }),
@@ -67,6 +67,7 @@ export const paginatedResponseSchema = <T extends TSchema>(item: T, title: strin
     },
     { title },
   );
+}
 
 export interface Paginated<T> {
   count: number;

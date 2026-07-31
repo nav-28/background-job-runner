@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, afterEach, before, beforeEach, describe, it } from 'node:test';
-import type { Worker, WorkerDescriptor } from '#src/engine/types.ts';
+import type { Worker, WorkerDescriptor } from '#src/engine/workers/types.ts';
 import { createGate, engineHarness, settleFor, waitFor } from '#tests/engine/gate-worker.ts';
 import { closeDb, DEV_USER_ID, ensureDevUser, truncateAll } from '#tests/helpers.ts';
 

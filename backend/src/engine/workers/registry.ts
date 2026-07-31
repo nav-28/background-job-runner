@@ -1,4 +1,4 @@
-import type { LaneInfo, ParamDescriptor, WorkerDescriptor } from '#src/engine/types.ts';
+import type { LaneInfo, ParamDescriptor, WorkerDescriptor } from '#src/engine/workers/types.ts';
 import { BadRequestError } from '#src/lib/errors.ts';
 
 /**
@@ -54,10 +54,7 @@ export function createWorkerRegistry(descriptors: WorkerDescriptor[]): WorkerReg
 /**
  * Undeclared parameters are passed through untouched rather than rejected.
  *
- * The strict reading — reject anything the worker did not declare — catches typos, but it also
- * makes `params` useless as a place to hang caller metadata, and the jsonb column exists precisely
- * so arbitrary payloads survive a round trip. Declared params are validated strictly; the rest
- * ride along.
+ * Also apply the default params
  */
 function applyMissing(target: Record<string, unknown>, spec: ParamDescriptor, lane: string): void {
   if (spec.default !== undefined) {
@@ -85,8 +82,6 @@ function coerce(value: unknown, spec: ParamDescriptor, lane: string): unknown {
 }
 
 function coerceNumber(value: unknown, spec: ParamDescriptor, lane: string): number {
-  // Numeric strings are accepted because query strings and form posts have no number type;
-  // rejecting "500" here would push the same coercion into every caller.
   const num = typeof value === 'number' ? value : Number(value);
   if (typeof value === 'boolean' || !Number.isFinite(num)) {
     throw new BadRequestError(reject(lane, spec, 'a number', value));
@@ -110,5 +105,6 @@ function coerceBoolean(value: unknown, spec: ParamDescriptor, lane: string): boo
   throw new BadRequestError(reject(lane, spec, 'a boolean', value));
 }
 
-const reject = (lane: string, spec: ParamDescriptor, expected: string, got: unknown): string =>
-  `Parameter "${spec.name}" on lane "${lane}" must be ${expected}, got ${JSON.stringify(got)}`;
+function reject(lane: string, spec: ParamDescriptor, expected: string, got: unknown): string {
+  return `Parameter "${spec.name}" on lane "${lane}" must be ${expected}, got ${JSON.stringify(got)}`;
+}

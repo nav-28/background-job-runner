@@ -1,3 +1,6 @@
+import type { TaskRepository } from '#src/engine/repository.types.ts';
+import type { LaneInfo, WorkerDescriptor } from '#src/engine/workers/types.ts';
+
 export const TaskStatus = {
   queued: 'queued',
   running: 'running',
@@ -102,63 +105,6 @@ export interface TaskFilters {
   limit?: number;
   offset?: number;
 }
-
-/** What a worker is handed. */
-export interface Job {
-  handle: string;
-  lane: string;
-  params: Record<string, unknown>;
-}
-
-export interface WorkerResult {
-  status: 'ready' | 'failed';
-  result?: unknown;
-  error?: { reason: string; retryable: boolean };
-}
-
-export interface WorkerContext {
-  signal: AbortSignal;
-}
-
-/**
- *
- * This deviates from the spec as we added a ctx. This is required to
- * cancel the Job using an `AbortSignal`.
- */
-export type Worker = (job: Job, ctx: WorkerContext) => Promise<WorkerResult>;
-
-/**
- * Describes one parameter a worker understands. Used for validation and for `lanes()`, which is
- * how a UI can render a form without hard-coding anything about a lane.
- *
- * `min`/`max` are a small addition over the spec's field list: the mock worker has to cap
- * `duration_ms` at 300000, and a bound that lives in the descriptor is discoverable by `lanes()`
- * whereas one buried in the handler is not.
- */
-export interface ParamDescriptor {
-  name: string;
-  type: 'number' | 'boolean' | 'string';
-  required: boolean;
-  default?: unknown;
-  description?: string;
-  min?: number;
-  max?: number;
-}
-
-export interface WorkerDescriptor {
-  lane: string;
-  /**
-   * A union of one member today. Everything dispatches on the event loop; 'thread' | 'external'
-   * land here later, and the registry already switches on this field rather than assuming.
-   */
-  kind: 'inline';
-  handler: Worker;
-  params: ParamDescriptor[];
-  description?: string;
-}
-
-/** `lanes()` output — the descriptor minus the handler, which is not serialisable. */
-export type LaneInfo = Omit<WorkerDescriptor, 'handler'>;
 
 export interface EngineEventBase {
   /** `task_events.id`. Monotonic per database, so a client can replay from a cursor. */
@@ -273,13 +219,16 @@ export interface EngineConfig {
   logger: EngineLogger;
   /** Identifies this process in `tasks.runnerId`. A restart must produce a new one. */
   runnerId: string;
+  /** Where tasks and events are stored. Defaults to the Postgres implementation. */
+  repository: TaskRepository;
 }
 
 /**
  * What `createEngine()` accepts.
  *
- * Everything is optional except `workers`. The numeric knobs and the bus have obvious defaults and
- * are implementation detail; workers are domain content. An engine that defaulted them would ship
+ * Everything is optional except `workers`. The numeric knobs, the bus and the repository have
+ * obvious defaults and are implementation detail; workers are domain content. An engine that
+ * defaulted them would ship
  * knowing that a lane called `scrape` exists, which is exactly the coupling `src/engine/` is meant
  * not to have.
  */

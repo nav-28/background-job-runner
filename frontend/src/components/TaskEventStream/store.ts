@@ -20,7 +20,10 @@ export const useTaskStreamStore = create<TaskStreamStore>((set) => ({
   reset: () => set({ status: INITIAL_STATUS }),
 }));
 
-export const setTaskStreamStatus = (status: TaskStreamStatus): void =>
+export function setTaskStreamStatus(status: TaskStreamStatus): void {
   useTaskStreamStore.getState().setStatus(status);
+}
 
-export const resetTaskStreamStatus = (): void => useTaskStreamStore.getState().reset();
+export function resetTaskStreamStatus(): void {
+  useTaskStreamStore.getState().reset();
+}

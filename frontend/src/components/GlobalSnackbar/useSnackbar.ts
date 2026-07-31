@@ -5,4 +5,6 @@ import type { SnackbarApi } from './types';
 
 const api: SnackbarApi = { enqueueSnackbar, closeSnackbar };
 
-export const useSnackbar = (): SnackbarApi => api;
+export function useSnackbar(): SnackbarApi {
+  return api;
+}

@@ -16,10 +16,10 @@ interface SnackbarProviderProps {
   maxSnack?: number;
 }
 
-export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({
+export function SnackbarProvider({
   children,
   maxSnack = DEFAULT_MAX_SNACK,
-}) => {
+}: SnackbarProviderProps) {
   const setMaxSnack = useSnackbarStore((state) => state.setMaxSnack);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({
       <SnackbarRenderer />
     </>
   );
-};
+}
 
 const SnackbarContainer = styled('div')(({ theme }) => ({
   position: 'fixed',
@@ -46,7 +46,7 @@ const SnackbarContainer = styled('div')(({ theme }) => ({
   pointerEvents: 'none', // Allow clicks to pass through the container
 }));
 
-const SnackbarRenderer: React.FC = () => {
+function SnackbarRenderer() {
   const snackbars = useSnackbarStore((state) => state.snackbars);
   const closeSnackbar = useSnackbarStore((state) => state.closeSnackbar);
 
@@ -62,4 +62,4 @@ const SnackbarRenderer: React.FC = () => {
       </TransitionGroup>
     </SnackbarContainer>
   );
-};
+}

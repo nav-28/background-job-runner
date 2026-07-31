@@ -729,10 +729,12 @@ describe('task API', async () => {
       assert.equal(res.statusCode, 200, 'no credential at all must still work');
 
       const lanes = res.json();
-      assert.deepEqual(lanes.map((lane: { lane: string }) => lane.lane).sort(), [
-        'report',
-        'scrape',
-      ]);
+      const names: string[] = lanes.map((lane: { lane: string }) => lane.lane);
+      // Asserts what the route must expose, not the exact registration list — otherwise adding a
+      // lane in src/plugins/engine.ts breaks a test that has no opinion about it.
+      for (const expected of ['report', 'scrape', 'web-scrape']) {
+        assert.ok(names.includes(expected), `${expected} is missing from /lanes: ${names}`);
+      }
 
       const scrape = lanes.find((lane: { lane: string }) => lane.lane === 'scrape');
       assert.equal(scrape.kind, 'inline');

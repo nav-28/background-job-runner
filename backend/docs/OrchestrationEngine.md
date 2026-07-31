@@ -14,15 +14,21 @@ is lost, because nothing ever lived only in the process.
 ## Files
 
 ```
-types.ts                 Engine, EngineConfig, Task, EngineEvent, Worker
+types.ts                 Engine, EngineConfig, Task, EngineEvent
+repository.types.ts      TaskRepository — what the engine asks of its store
 index.ts                 createEngine() — resolves defaults, wires everything up
 orchestration-engine.ts  submit, get, list, collect, cancel, retry
 runner.ts                the claim loop, heartbeat, lease reaper, transition writer
 handles.ts               handle allocation and its retry loop
-repository.ts            all the SQL
+repository.ts            all the SQL, and postgresTaskRepository
 events.ts                the in-process event bus
 workers/registry.ts      lane lookup and parameter validation
+workers/types.ts         Worker, Job, WorkerResult, WorkerDescriptor
 ```
+
+`workers/types.ts` is what a worker author reads, and it imports nothing from `types.ts` — writing a
+lane needs no knowledge of tasks, events or engine config. `types.ts` imports `WorkerDescriptor` and
+`LaneInfo` from it, for `EngineConfig.workers` and `Engine.lanes()`.
 
 Workers live outside, in `src/workers/`. The engine has no default set — `workers` is the one config
 field you can't omit. An engine that shipped knowing a lane called `scrape` exists would have exactly
@@ -199,6 +205,23 @@ Live events and replayed ones go through the same projection, so a client reconn
 id it saw gets something byte-identical to the live stream. Events are durable in `task_events`
 regardless, so the bus is an optimisation over polling, never the source of truth.
 
+## Storage
+
+Nothing in the engine imports `repository.ts` any more. `TaskRepository` in `repository.types.ts`
+declares what the engine asks of a store, `createEngine()` defaults it to `postgresTaskRepository`,
+and the runner and the engine take it through their constructors.
+
+The methods are **operations, not queries**. Allocating a handle is an advisory lock, a gap-finding
+query and two inserts — one method, one transaction. `transition` is a guarded update plus its
+event. Each recovery sweep is a bulk requeue plus one event per row. Handing a transaction handle
+across the interface would make a replacement store reimplement the semantics rather than the
+storage, which would leave nothing worth abstracting.
+
+It is a seam, not portability. `claim` still promises what `FOR UPDATE SKIP LOCKED` gives, guarded
+updates still promise "match zero rows instead of failing", and `isHandleConflict` is on the
+interface because a lost allocation race surfaces here as a partial unique index firing `23505`. A
+non-SQL store would have to emulate all three.
+
 ## Workers
 
 ```ts
@@ -240,6 +263,7 @@ Only `workers` is required.
 | `bus` | in-process | Where transitions are published |
 | `logger` | silent | Where background failures go. A pino logger fits with no adapter |
 | `runnerId` | random uuid | Identifies this process. A restart must produce a new one |
+| `repository` | Postgres | Where tasks and events are stored |
 
 `createEngine()` never reads the environment. An engine that did couldn't be instantiated twice with
 different settings in one process, which is what the durability tests need.

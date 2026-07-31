@@ -1,4 +1,4 @@
-import type { Worker, WorkerDescriptor } from '#src/engine/types.ts';
+import type { Worker, WorkerDescriptor } from '#src/engine/workers/types.ts';
 
 /**
  * The stand-in for real work. It sleeps for a while and then either succeeds or fails, which is
@@ -42,10 +42,11 @@ export function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-const pickDuration = (raw: unknown): number =>
-  typeof raw === 'number'
+function pickDuration(raw: unknown): number {
+  return typeof raw === 'number'
     ? raw
     : Math.floor(MIN_DURATION_MS + Math.random() * (MAX_DURATION_MS - MIN_DURATION_MS));
+}
 
 export const mockHandler: Worker = async (job, ctx) => {
   const durationMs = pickDuration(job.params.duration_ms);
@@ -89,13 +90,15 @@ const mockParams = [
   },
 ] as const satisfies WorkerDescriptor['params'];
 
-const describe = (lane: string, description: string): WorkerDescriptor => ({
-  lane,
-  kind: 'inline',
-  handler: mockHandler,
-  params: [...mockParams],
-  description,
-});
+function describe(lane: string, description: string): WorkerDescriptor {
+  return {
+    lane,
+    kind: 'inline',
+    handler: mockHandler,
+    params: [...mockParams],
+    description,
+  };
+}
 
 /** Pass these in: `createEngine({ workers: mockWorkers })`. There is no default worker set. */
 export const mockWorkers: WorkerDescriptor[] = [

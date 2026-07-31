@@ -1,7 +1,8 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { getDb } from '#src/db.ts';
 import { createEngine, type Engine } from '#src/engine/index.ts';
-import type { EngineOptions, Worker, WorkerDescriptor, WorkerResult } from '#src/engine/types.ts';
+import type { EngineOptions } from '#src/engine/types.ts';
+import type { Worker, WorkerDescriptor, WorkerResult } from '#src/engine/workers/types.ts';
 
 /**
  * Test scaffolding for the engine.

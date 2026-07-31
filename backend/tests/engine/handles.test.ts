@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, afterEach, before, beforeEach, describe, it } from 'node:test';
 import { allocateHandleAndInsert } from '#src/engine/handles.ts';
+import { postgresTaskRepository } from '#src/engine/repository.ts';
 import {
   createGate,
   engineHarness,
@@ -98,7 +99,16 @@ describe('engine — handle allocation', () => {
     // with a temporary probe in the loop, three racers collide three times and settle by the third
     // attempt — comfortably inside MAX_ALLOCATION_ATTEMPTS, and zero collisions with the lock on.
     const allocate = () =>
-      allocateHandleAndInsert(DEV_USER_ID, 'scrape', {}, { maxAttempts: 3, useLaneLock: false });
+      allocateHandleAndInsert(
+        postgresTaskRepository,
+        DEV_USER_ID,
+        'scrape',
+        {},
+        {
+          maxAttempts: 3,
+          useLaneLock: false,
+        },
+      );
 
     const allocations = await Promise.all([allocate(), allocate(), allocate()]);
     const tasks = allocations.map(({ task }) => task);

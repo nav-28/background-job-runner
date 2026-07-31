@@ -29,10 +29,10 @@ export async function closeDb() {
  * Falsy entries are skipped, so callers can write `filters.email && db`email = ${...}``.
  * Returns an empty fragment when nothing is filtered.
  */
-export const joinConditions = (
+export function joinConditions(
   xs: (postgres.PendingQuery<postgres.Row[]> | false | undefined | null | '')[],
   joiner?: postgres.PendingQuery<postgres.Row[]>,
-) => {
+) {
   const db = getDb();
   const join = joiner ?? db`AND`;
   const filtered = xs.filter(Boolean) as postgres.PendingQuery<postgres.Row[]>[];
@@ -45,7 +45,7 @@ export const joinConditions = (
     (acc, fragment, i) => (i === 0 ? db`WHERE ${fragment}` : db`${acc} ${join} ${fragment}`),
     db``,
   );
-};
+}
 
 /**
  * Runs a callback inside a transaction. Queries issued on `tx` share it.

@@ -64,8 +64,9 @@ function attribute(tag: string, name: string): string | null {
   return match[1] ?? match[2] ?? match[3] ?? null;
 }
 
-const decode = (value: string): string =>
-  value.replace(ENTITY, (entity) => ENTITIES[entity.toLowerCase()] ?? entity);
+function decode(value: string): string {
+  return value.replace(ENTITY, (entity) => ENTITIES[entity.toLowerCase()] ?? entity);
+}
 
 function clean(value: string | null | undefined): string | null {
   if (value === null || value === undefined) {

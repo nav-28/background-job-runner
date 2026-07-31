@@ -32,7 +32,10 @@ export const useSnackbarStore = create<SnackbarStore>((set) => ({
     set((state) => ({ snackbars: state.snackbars.filter((snack) => snack.key !== key) })),
 }));
 
-export const enqueueSnackbar = (message: SnackbarMessage, options?: SnackbarOptions): string =>
-  useSnackbarStore.getState().enqueueSnackbar(message, options);
+export function enqueueSnackbar(message: SnackbarMessage, options?: SnackbarOptions): string {
+  return useSnackbarStore.getState().enqueueSnackbar(message, options);
+}
 
-export const closeSnackbar = (key: string): void => useSnackbarStore.getState().closeSnackbar(key);
+export function closeSnackbar(key: string): void {
+  useSnackbarStore.getState().closeSnackbar(key);
+}

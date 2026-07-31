@@ -5,7 +5,9 @@ import { AppError } from '#src/lib/errors.ts';
 import { type ApiErrorResponse, apiErrorResponseSchema } from '#src/lib/http.ts';
 import { getRequestId, getUserId } from '#src/plugins/request-context.ts';
 
-const reasonFor = (status: number): string => STATUS_CODES[status] ?? 'Error';
+function reasonFor(status: number): string {
+  return STATUS_CODES[status] ?? 'Error';
+}
 
 function isFastifyError(error: Error): error is FastifyError {
   const { code } = error as FastifyError;
